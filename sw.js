@@ -1,11 +1,13 @@
 // Menyimpan halaman aplikasi di HP supaya tetap bisa dibuka saat internet putus.
 // Selalu coba ambil versi terbaru dulu; kalau offline, pakai salinan tersimpan.
 // Data (Supabase) tidak disimpan di sini — transaksi offline diurus oleh index.html.
-const CACHE = 'hpp-app-v1';
+const CACHE = 'hpp-app-v2';
 const ASSETS = [
   './',
   './index.html',
   './config.js',
+  './logo.webp',
+  './manifest.webmanifest',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
 ];
 

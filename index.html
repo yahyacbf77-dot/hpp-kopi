@@ -3,15 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Hitung HPP Kopi & Kue</title>
+<title>YA Coffee & Cake · Kasir & HPP</title>
+<meta name="theme-color" content="#9a5b25">
+<link rel="icon" href="logo.webp" type="image/webp">
+<link rel="apple-touch-icon" href="logo.webp">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Layout: alat kerja — daftar menu di kiri, resep + hasil di kanan; tab berbeda untuk pemilik dan karyawan */
 :root{
-  --bg:#f6f5f2; --surface:#ffffff; --surface-2:#efece6; --line:#ddd7cc;
-  --fg:#231a14; --muted:#6f6359;
-  --accent:#7a4320; --accent-ink:#ffffff; --accent-soft:#f1e3d6;
+  --bg:#ecebe8; --surface:#ffffff; --surface-2:#e4e1dc; --line:#d8d3cb;
+  --fg:#1d1a18; --muted:#5c5650;
+  --accent:#9a5b25; --accent-ink:#ffffff; --accent-soft:#f3e6d8;
   --kue:#5f7a3a; --kue-soft:#e6eedb;
   --good:#2f7a4a; --good-soft:#dcefe2; --warn:#a46a00; --warn-soft:#fbecc9; --bad:#b33a2b; --bad-soft:#f8dcd7;
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
@@ -22,7 +26,7 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#171310; --surface:#211b17; --surface-2:#2b241f; --line:#3d342d;
   --fg:#f1e9e1; --muted:#a8998c;
-  --accent:#d98b55; --accent-ink:#1a120c; --accent-soft:#3a2a1f;
+  --accent:#d9a066; --accent-ink:#1a120c; --accent-soft:#3a2a1f;
   --kue:#9dbb6f; --kue-soft:#2b3322;
   --good:#6cc28b; --good-soft:#1f3327; --warn:#e3b04f; --warn-soft:#3a2f17; --bad:#ef7f6f; --bad-soft:#3d221e;
   color-scheme:dark;}}
@@ -165,9 +169,55 @@ tbody tr:last-child td{border-bottom:0}
 .big-price{font-family:var(--f-display);font-size:26px;font-weight:800}
 /* Kasir */
 .kasir{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
-@media (max-width:900px){.kasir{grid-template-columns:minmax(0,1fr)}}
 .kasir>*{min-width:0}
 .cart{position:sticky;top:12px}
+.sheet-close{display:none}
+.cartbar{display:none}
+/* Tablet (termasuk berdiri): menu kiri, pesanan kanan */
+@media (max-width:1000px){
+  .kasir{grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+  .citem{grid-template-columns:auto minmax(0,1fr);row-gap:6px}
+  .citem>div:first-child{grid-column:1/-1}
+  .citem>b{justify-self:end}
+}
+/* HP: pesanan jadi lembar dari bawah + bar total yang selalu terlihat */
+@media (max-width:699px){
+  .kasir{grid-template-columns:minmax(0,1fr)}
+  .cart{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;max-height:88vh;overflow-y:auto;border-radius:16px 16px 0 0;
+        transform:translateY(105%);visibility:hidden;transition:transform .25s ease, visibility 0s linear .25s;
+        padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px));padding-left:max(18px, env(safe-area-inset-left, 0px));padding-right:max(18px, env(safe-area-inset-right, 0px));
+        box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+  body.cart-open .cart{transform:none;visibility:visible;transition:transform .25s ease}
+  .sheet-close{display:inline-flex;font-size:18px}
+  .cartbar:not([hidden]){display:flex}
+  .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:55;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border-top:1px solid var(--line);
+           padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  .cartbar b{display:block;font-size:13px;color:var(--muted);font-weight:600}
+  .cartbar span{font-family:var(--f-display);font-size:20px;font-weight:800}
+  .cartbar .btn{padding:13px 16px;font-size:15px}
+  .sheet-bg:not([hidden]){position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:58}
+  #tab-kasir{padding-bottom:84px}
+  .mgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mbtn{min-height:84px}
+}
+@media (prefers-reduced-motion: reduce){.cart{transition:none!important}}
+.extra>summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:13px;padding:4px 0;list-style-position:inside}
+.extra[open]{display:flex;flex-direction:column;gap:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom, 0px));z-index:70;width:max-content;max-width:min(92vw, 480px);padding:12px 16px;border-radius:10px;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+.toast.ok{background:var(--good);color:#fff}
+.toast.info{background:var(--fg);color:var(--bg)}
+.toast.err{background:var(--bad);color:#fff}
+#shiftBar{padding:12px 16px}
+.shift-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px}
+.shift-line .info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-width:0}
+.dotlive{width:10px;height:10px;border-radius:50%;background:var(--good);display:inline-block;flex:none}
+/* Merek */
+.brand-row{display:flex;align-items:center;gap:12px}
+.brand-row .note{margin-top:2px}
+.brand-logo{width:56px;height:56px;object-fit:contain;flex:none}
+.auth .brand{text-align:center}
+.auth .brand .brand-logo{width:104px;height:104px;display:block;margin:0 auto 8px}
+@media (max-width:600px){.brand-row .brand-logo{width:44px;height:44px} h1{font-size:22px}}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .mbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px;cursor:pointer;min-height:76px;position:relative}
 .mbtn:hover{border-color:var(--accent)}
@@ -216,7 +266,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
 
   <!-- Belum dikonfigurasi -->
   <section id="screen-setup" class="auth" hidden>
-    <div class="brand"><h1>Hitung HPP Kopi & Kue</h1></div>
+    <div class="brand"><img src="logo.webp" alt="Logo YA Coffee &amp; Cake" class="brand-logo"><h1>YA Coffee &amp; Cake</h1></div>
     <div class="panel card">
       <h2>Belum tersambung ke database</h2>
       <p class="note">Isi <b>SUPABASE_URL</b> dan <b>SUPABASE_ANON_KEY</b> di file <code>config.js</code>, lalu muat ulang halaman ini. Langkah lengkapnya ada di <code>PANDUAN.md</code>.</p>
@@ -230,8 +280,9 @@ details.card>summary{cursor:pointer;list-style-position:inside}
   <!-- Login -->
   <section id="screen-auth" class="auth" hidden>
     <div class="brand">
-      <h1>Hitung HPP Kopi & Kue</h1>
-      <p>Masuk untuk mengelola HPP atau mencatat belanja bahan.</p>
+      <img src="logo.webp" alt="Logo YA Coffee &amp; Cake" class="brand-logo">
+      <h1>YA Coffee &amp; Cake</h1>
+      <p>Masuk untuk membuka kasir, mencatat belanja, atau mengelola HPP.</p>
     </div>
     <div class="panel card" id="authCard">
       <div class="seg" role="tablist">
@@ -260,7 +311,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
 
   <!-- Tidak ada akses -->
   <section id="screen-noaccess" class="auth" hidden>
-    <div class="brand"><h1>Hitung HPP Kopi & Kue</h1></div>
+    <div class="brand"><img src="logo.webp" alt="Logo YA Coffee &amp; Cake" class="brand-logo"><h1>YA Coffee &amp; Cake</h1></div>
     <div class="panel card">
       <h2>Akun belum punya akses</h2>
       <p class="note">Kamu masuk sebagai <b id="naEmail"></b>, tapi email ini belum ditambahkan atau sedang dinonaktifkan. Minta pemilik menambahkan email kamu di menu <b>Karyawan</b>, lalu masuk lagi.</p>
@@ -271,8 +322,9 @@ details.card>summary{cursor:pointer;list-style-position:inside}
   <!-- Aplikasi -->
   <section id="screen-app" hidden>
     <header class="top">
-      <div>
-        <h1>Hitung HPP Kopi & Kue</h1>
+      <div class="brand-row">
+        <img src="logo.webp" alt="" class="brand-logo">
+        <div><h1>YA Coffee &amp; Cake</h1><p class="note">Kasir &amp; hitung HPP</p></div>
       </div>
       <div class="who">
         <span id="syncStatus" class="sync" role="status" hidden></span>
@@ -352,15 +404,18 @@ details.card>summary{cursor:pointer;list-style-position:inside}
             <div class="field" id="kSaluranBox"><span>Saluran</span><div class="seg wrap" id="kSaluran"></div></div>
             <div class="mgrid" id="menuGrid"></div>
           </div>
-          <div class="panel card cart">
-            <h2>Pesanan</h2>
+          <div class="panel card cart" id="cartPanel">
+            <div class="sub"><h2>Pesanan</h2><button class="btn ghost sheet-close" type="button" id="cartClose" aria-label="Tutup pesanan">✕</button></div>
             <div id="cartList"></div>
+            <details id="kExtra" class="extra"><summary>+ Diskon / catatan</summary>
             <div class="field"><span>Diskon</span>
               <div style="display:flex;gap:6px">
                 <input type="number" min="0" step="any" id="kDiskon" inputmode="numeric" placeholder="0" style="flex:1">
                 <div class="seg" id="kDiskonMode" style="width:110px"><button type="button" data-dm="rp" aria-selected="true">Rp</button><button type="button" data-dm="pct" aria-selected="false">%</button></div>
               </div>
             </div>
+            <label class="field"><span>Catatan</span><input type="text" id="kCatatan" placeholder="mis. less sugar, nama pembeli"></label>
+            </details>
             <div>
               <div class="kv"><span>Subtotal</span><span class="num" id="cartSub">Rp 0</span></div>
               <div class="kv" id="cartDiskRow" hidden><span>Diskon</span><span class="num" id="cartDisk"></span></div>
@@ -378,7 +433,6 @@ details.card>summary{cursor:pointer;list-style-position:inside}
               <label class="field"><span>Uang diterima (Rp)</span><input type="number" min="0" step="500" id="kBayar" inputmode="numeric" placeholder="opsional"></label>
               <div class="kv" id="kKembaliRow" hidden><span>Kembalian</span><b class="num" id="kKembali"></b></div>
             </div>
-            <label class="field"><span>Catatan (opsional)</span><input type="text" id="kCatatan" placeholder="mis. less sugar, nama pembeli"></label>
             <button class="btn primary" type="button" id="kSimpan" style="padding:12px;font-size:15px">Simpan transaksi</button>
             <p class="msg" id="kMsg" hidden></p>
           </div>
@@ -403,6 +457,11 @@ details.card>summary{cursor:pointer;list-style-position:inside}
           <div class="sub"><button class="btn" type="button" id="salTambah">+ Saluran</button><button class="btn primary" type="button" id="salSimpan">Simpan pengaturan</button></div>
           <p class="msg" id="salMsg" hidden></p>
         </details>
+      </div>
+      <div class="sheet-bg" id="sheetBg" hidden></div>
+      <div class="cartbar" id="cartBar" hidden>
+        <div><b id="cbCount">0 item</b><span class="num" id="cbTotal">Rp 0</span></div>
+        <button class="btn primary" type="button" id="cbBayar">Lihat pesanan &amp; bayar</button>
       </div>
     </section>
 
@@ -543,6 +602,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
       </div>
     </section>
   </section>
+  <div class="toast" id="toast" role="status" hidden></div>
 </div>
 
 <script>
@@ -885,6 +945,7 @@ function buildTabs(){
 $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if(b) openTab(b.dataset.tab); });
 function openTab(name){
   currentTab = name;
+  bukaSheet(false);
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
   ALL_TABS.forEach(t => $('tab-'+t).hidden = t !== name);
   if(name === 'produk') renderEditor();
@@ -1420,7 +1481,19 @@ function renderCart(){
   $('cartDiskRow').hidden = !c.disk; $('cartDisk').textContent = '− ' + rp(c.disk);
   $('cartTotal').textContent = rp(c.total);
   $('kSimpan').disabled = !c.items.length;
+  const n = c.items.reduce((a,x) => a + x.q, 0);
+  $('cartBar').hidden = !n; $('cbCount').textContent = n + ' item'; $('cbTotal').textContent = rp(c.total);
+  if(!n) bukaSheet(false);
   updateKembali(c.total);
+}
+function bukaSheet(on){ document.body.classList.toggle('cart-open', !!on); $('sheetBg').hidden = !on; }
+$('cbBayar').addEventListener('click', () => bukaSheet(true));
+$('cartClose').addEventListener('click', () => bukaSheet(false));
+$('sheetBg').addEventListener('click', () => bukaSheet(false));
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('cart-open')) bukaSheet(false); });
+function toast(text, type){
+  const t = $('toast'); t.className = 'toast ' + (type || 'ok'); t.textContent = text; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 4500);
 }
 function updateKembali(total){
   const t = total == null ? hitungCart().total : total, tunai = kMetode === 'Tunai' && !salCur().bayar_aplikasi;
@@ -1459,7 +1532,7 @@ $('kSimpan').addEventListener('click', async () => {
     p_catatan: $('kCatatan').value.trim() || null, p_saluran: s.id, p_diskon: c.disk, p_client_id: uid(), p_waktu: new Date().toISOString()};
   const info = {total: c.total, rincian: c.items.map(x => x.q + '× ' + x.j.nama).join(', '), saluran: s.nama, metode};
   const bayar = num($('kBayar').value), kembali = metode === 'Tunai' && bayar >= c.total ? ` · Kembalian ${rp(bayar - c.total)}` : '';
-  const reset = () => { cart.clear(); $('kCatatan').value = ''; $('kBayar').value = ''; $('kDiskon').value = ''; renderGrid(); renderCart(); };
+  const reset = () => { cart.clear(); $('kCatatan').value = ''; $('kBayar').value = ''; $('kDiskon').value = ''; $('kExtra').open = false; renderGrid(); renderCart(); bukaSheet(false); };
   $('kSimpan').disabled = true;
   try {
     if(!navigator.onLine) throw new Error('offline');
@@ -1467,11 +1540,13 @@ $('kSimpan').addEventListener('click', async () => {
     const {data, error} = await sb.rpc('catat_penjualan', payload);
     if(error) throw error;
     msg(m,'ok',`Tersimpan (#${data.id}) · ${s.nama} · ${metode} ${rp(data.total)}${kembali}`);
+    toast(`✓ Tersimpan · ${rp(data.total)}${kembali}`, 'ok');
     reset(); loadSaya(); refreshShift();
   } catch(err){
     if(isNetErr(err)){
       enqueue(payload, info);
       msg(m,'info',`Internet putus. Transaksi ${rp(c.total)} disimpan di HP dan dikirim otomatis saat online.${kembali}`);
+      toast(`Disimpan di HP (offline) · ${rp(c.total)}${kembali}`, 'info');
       reset(); renderAntrian(); setOffline(true);
     } else { msg(m,'err',terjemah(err)); $('kSimpan').disabled = false; }
   }
@@ -1547,14 +1622,14 @@ async function refreshShift(){
     return;
   }
   if(!data){
-    el.innerHTML = `<div class="shift"><div><h2>Kasir belum dibuka</h2><p class="note">Hitung uang di laci, isi sebagai modal awal, lalu buka kasir. Transaksi tetap bisa dicatat tanpa membuka kasir, tapi tidak masuk hitungan tutup kasir.</p></div>
-      <div class="shift-form"><label class="field"><span>Modal awal di laci (Rp)</span><input type="number" min="0" step="500" id="sModal" inputmode="numeric"></label><button class="btn primary" type="button" id="sBuka">Buka kasir</button></div></div>`;
+    el.innerHTML = `<div class="shift-line"><div class="info"><b>Kasir belum dibuka</b><span class="note">Hitung uang di laci, isi modal awal, lalu buka.</span></div>
+      <div class="shift-form"><input type="number" min="0" step="500" id="sModal" inputmode="numeric" placeholder="Modal awal (Rp)" aria-label="Modal awal di laci" style="width:160px"><button class="btn primary" type="button" id="sBuka">Buka kasir</button></div></div>`;
     return;
   }
   const harus = +data.modal_awal + +data.tunai;
-  el.innerHTML = `<div class="shift"><div><h2>Kasir dibuka ${jam(data.dibuka_pada)} <span class="chip good">Buka</span></h2>
-      <div class="stats" style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal_awal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>tunai masuk</span></div><div class="stat"><b class="num">${rp(harus)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${data.transaksi}</b><span>transaksi</span></div></div></div>
-    <div class="shift-form" id="sTutupBox"><button class="btn" type="button" id="sTutupMulai">Tutup kasir</button></div></div>`;
+  el.innerHTML = `<div class="shift-line"><div class="info"><span class="dotlive" aria-hidden="true"></span><b>Kasir buka ${jam(data.dibuka_pada)}</b><span>Seharusnya di laci <b class="num">${rp(harus)}</b></span><button class="link" type="button" id="sDetail">Rincian</button></div>
+      <div class="shift-form" id="sTutupBox"><button class="btn" type="button" id="sTutupMulai">Tutup kasir</button></div></div>
+    <div class="stats" id="sStats" hidden style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal_awal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>tunai masuk</span></div><div class="stat"><b class="num">${rp(harus)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${data.transaksi}</b><span>transaksi</span></div></div>`;
 }
 $('shiftBar').addEventListener('click', async e => {
   const t = e.target.closest('button'); if(!t) return;
@@ -1569,6 +1644,9 @@ $('shiftBar').addEventListener('click', async e => {
       <label class="field"><span>Catatan (opsional)</span><input type="text" id="sCatatan"></label>
       <button class="btn primary" type="button" id="sTutup">Simpan & tutup</button><button class="btn" type="button" id="sBatalTutup">Batal</button>`;
     $('sFisik').focus();
+  } else if(t.id === 'sDetail'){
+    $('sStats').hidden = !$('sStats').hidden;
+    t.textContent = $('sStats').hidden ? 'Rincian' : 'Sembunyikan';
   } else if(t.id === 'sBatalTutup' || t.id === 'sOk'){
     refreshShift();
   } else if(t.id === 'sTutup'){

@@ -1,0 +1,12 @@
+{
+  "name": "YA Coffee & Cake · Kasir & HPP",
+  "short_name": "YA Kasir",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ecebe8",
+  "theme_color": "#9a5b25",
+  "icons": [
+    { "src": "logo.webp", "sizes": "320x332", "type": "image/webp", "purpose": "any" }
+  ]
+}
