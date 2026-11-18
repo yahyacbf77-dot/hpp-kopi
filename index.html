@@ -163,6 +163,41 @@ tbody tr:last-child td{border-bottom:0}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 .big-price{font-family:var(--f-display);font-size:26px;font-weight:800}
+/* Kasir */
+.kasir{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:900px){.kasir{grid-template-columns:minmax(0,1fr)}}
+.kasir>*{min-width:0}
+.cart{position:sticky;top:12px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.mbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px;cursor:pointer;min-height:76px;position:relative}
+.mbtn:hover{border-color:var(--accent)}
+.mbtn:active{transform:scale(.98)}
+.mbtn .n{font-weight:600;line-height:1.3;padding-right:22px}
+.mbtn .p{font-size:13px;color:var(--muted)}
+.mbtn.kue{border-left:4px solid var(--kue)}
+.mbtn.kopi{border-left:4px solid var(--accent)}
+.mbtn:disabled{opacity:.5;cursor:not-allowed}
+.mbtn .q{position:absolute;top:6px;right:6px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;border-radius:999px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px}
+.citem{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.citem .n{font-weight:500}
+.citem .s{font-size:12px;color:var(--muted)}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700}
+.qty b{min-width:20px;text-align:center}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{background:var(--surface-2);border-radius:8px;padding:10px 14px;min-width:120px}
+.stat b{display:block;font-family:var(--f-display);font-size:20px}
+.stat span{font-size:12px;color:var(--muted)}
+tr.void td{color:var(--muted);text-decoration:line-through}
+/* Laporan */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg)}
+.tile .v{font-family:var(--f-display);font-size:24px;font-weight:800;margin-top:4px}
+.tile .s{font-size:12px;color:var(--muted)}
+.lap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:20px}
+@media (max-width:420px){.lap-grid{grid-template-columns:minmax(0,1fr)}}
+.lap-grid>*{min-width:0}
+.hbar{height:8px;border-radius:999px;background:var(--accent);min-width:2px}
 @media (prefers-reduced-motion: no-preference){.bar span{transition:width .25s ease}}
 </style>
 <script src="config.js"></script>
@@ -286,6 +321,117 @@ tbody tr:last-child td{border-bottom:0}
             <thead><tr><th>Menu</th><th>Kategori</th><th class="r">HPP / porsi</th><th class="r">Harga jual</th><th class="r">Laba / porsi</th><th class="r">Food cost</th><th>Status</th></tr></thead>
             <tbody id="sumBody"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- BERSAMA: Kasir -->
+    <section id="tab-kasir" hidden>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="kasir">
+          <div class="panel card">
+            <div class="sub">
+              <h2>Pilih menu</h2>
+              <div class="seg" id="kFilter" style="min-width:220px">
+                <button type="button" data-kf="" aria-selected="true">Semua</button>
+                <button type="button" data-kf="Kopi" aria-selected="false">Kopi</button>
+                <button type="button" data-kf="Kue" aria-selected="false">Kue</button>
+              </div>
+            </div>
+            <div class="mgrid" id="menuGrid"></div>
+          </div>
+          <div class="panel card cart">
+            <h2>Pesanan</h2>
+            <div id="cartList"></div>
+            <div class="kv"><span>Total</span><b class="big-price num" id="cartTotal">Rp 0</b></div>
+            <div class="field"><span>Cara bayar</span>
+              <div class="seg" id="kMetode">
+                <button type="button" data-m="Tunai" aria-selected="true">Tunai</button>
+                <button type="button" data-m="QRIS" aria-selected="false">QRIS</button>
+                <button type="button" data-m="Transfer" aria-selected="false">Transfer</button>
+              </div>
+            </div>
+            <div id="kTunaiBox" style="display:flex;flex-direction:column;gap:6px">
+              <label class="field"><span>Uang diterima (Rp)</span><input type="number" min="0" step="500" id="kBayar" inputmode="numeric" placeholder="opsional"></label>
+              <div class="kv" id="kKembaliRow" hidden><span>Kembalian</span><b class="num" id="kKembali"></b></div>
+            </div>
+            <label class="field"><span>Catatan (opsional)</span><input type="text" id="kCatatan" placeholder="mis. less sugar, nama pembeli"></label>
+            <button class="btn primary" type="button" id="kSimpan" style="padding:12px;font-size:15px">Simpan transaksi</button>
+            <p class="msg" id="kMsg" hidden></p>
+          </div>
+        </div>
+        <div class="panel card">
+          <div class="sub"><h2>Penjualan saya hari ini</h2><button class="btn" type="button" id="kReload">Muat ulang</button></div>
+          <div class="stats" id="sayaStats"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Jam</th><th>Rincian</th><th>Bayar</th><th class="r">Total</th><th></th></tr></thead>
+              <tbody id="sayaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PEMILIK: Laporan -->
+    <section id="tab-laporan" hidden>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="panel card">
+          <div class="form-grid">
+            <label class="field"><span>Periode</span>
+              <select id="lPeriode">
+                <option value="hari">Hari ini</option>
+                <option value="kemarin">Kemarin</option>
+                <option value="7">7 hari terakhir</option>
+                <option value="bulan" selected>Bulan ini</option>
+                <option value="bulanlalu">Bulan lalu</option>
+                <option value="custom">Pilih tanggal…</option>
+              </select>
+            </label>
+            <label class="field"><span>Dari</span><input type="date" id="lDari"></label>
+            <label class="field"><span>Sampai</span><input type="date" id="lSampai"></label>
+            <button class="btn primary" type="button" id="lMuat">Tampilkan</button>
+          </div>
+          <p class="msg" id="lMsg" hidden></p>
+          <div class="tiles" id="lTiles"></div>
+          <p class="note">Laba kotor = omzet − HPP barang terjual (HPP dicatat saat transaksi). Laba bersih = laba kotor − biaya operasional di tab Biaya.</p>
+        </div>
+        <div class="lap-grid">
+          <div class="panel card"><h2>Per hari</h2><div class="tbl-wrap"><table><thead><tr><th>Tanggal</th><th class="r">Transaksi</th><th class="r">Omzet</th><th class="r">Laba kotor</th><th style="width:30%"></th></tr></thead><tbody id="lHari"></tbody></table></div></div>
+          <div class="panel card"><h2>Menu terlaris</h2><div class="tbl-wrap"><table><thead><tr><th>Menu</th><th class="r">Terjual</th><th class="r">Omzet</th><th class="r">Laba kotor</th></tr></thead><tbody id="lMenu"></tbody></table></div></div>
+          <div class="panel card"><h2>Per karyawan</h2><div class="tbl-wrap"><table><thead><tr><th>Nama</th><th class="r">Transaksi</th><th class="r">Omzet</th></tr></thead><tbody id="lKaryawan"></tbody></table></div></div>
+          <div class="panel card"><h2>Per cara bayar</h2><p class="note">Cocokkan dengan uang di laci, saldo QRIS, dan mutasi rekening.</p><div class="tbl-wrap"><table><thead><tr><th>Cara bayar</th><th class="r">Transaksi</th><th class="r">Total</th></tr></thead><tbody id="lMetode"></tbody></table></div></div>
+        </div>
+        <div class="panel card">
+          <h2>Daftar transaksi</h2>
+          <div class="tbl-wrap"><table><thead><tr><th>Waktu</th><th>Oleh</th><th>Rincian</th><th>Bayar</th><th class="r">Total</th><th class="r">Laba kotor</th><th></th></tr></thead><tbody id="lTrx"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PEMILIK: Biaya -->
+    <section id="tab-biaya" hidden>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <form class="panel card" id="byForm" novalidate>
+          <div>
+            <h2>Catat biaya operasional</h2>
+            <p class="note">Masukkan biaya yang <b>tidak</b> ada di resep: sewa, gaji tetap, internet, perawatan alat. Jangan masukkan belanja bahan baku (sudah dihitung lewat HPP). Kalau tenaga kerja sudah kamu masukkan di “biaya lain” resep, jangan catat gaji lagi di sini supaya tidak terhitung dua kali.</p>
+          </div>
+          <div class="form-grid">
+            <label class="field"><span>Tanggal</span><input type="date" id="byTanggal"></label>
+            <label class="field"><span>Kategori</span>
+              <select id="byKategori"><option>Sewa</option><option>Gaji</option><option>Listrik & Air</option><option>Gas</option><option>Internet & Pulsa</option><option>Perawatan</option><option>Promosi</option><option>Lainnya</option></select>
+            </label>
+            <label class="field"><span>Keterangan</span><input type="text" id="byKet" placeholder="mis. Sewa ruko November"></label>
+            <label class="field"><span>Jumlah (Rp)</span><input type="number" min="0" step="any" id="byNilai" inputmode="numeric"></label>
+            <button class="btn primary" type="submit" id="bySubmit">Simpan biaya</button>
+          </div>
+          <p class="msg" id="byMsg" hidden></p>
+        </form>
+        <div class="panel card">
+          <div class="sub"><h2>Biaya per bulan</h2><label class="field" style="width:180px"><input type="month" id="byBulan" aria-label="Bulan"></label></div>
+          <div class="stats" id="byStats"></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th class="r">Jumlah</th><th></th></tr></thead><tbody id="byBody"></tbody></table></div>
         </div>
       </div>
     </section>
@@ -482,6 +628,7 @@ async function flush(){
     if(upM.length){ const {error} = await sb.from('menu').upsert(upM); if(error) throw error; upMjs.forEach(([id,js]) => saved.menu.set(id,js)); }
     if(delM.length){ const {error} = await sb.from('menu').delete().in('id', delM); if(error) throw error; delM.forEach(id => saved.menu.delete(id)); }
     if(delB.length){ const {error} = await sb.from('bahan').delete().in('id', delB); if(error) throw error; delB.forEach(id => saved.bahan.delete(id)); }
+    await syncHpp();
     setSync(dirty ? 'saving' : 'synced');
   } catch(e){
     dirty = true; setSync('error', terjemah(e));
@@ -492,20 +639,56 @@ window.addEventListener('beforeunload', e => { if(dirty || flushing){ e.preventD
 
 async function loadOwner(silent){
   if(!silent) setSync('loading');
-  const [b, m] = await Promise.all([
+  const [b, m, hk] = await Promise.all([
     sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at'),
     sb.from('menu').select('id,nama,kategori,data').order('created_at'),
+    sb.from('hpp_terkini').select('kunci,menu_id,nama,kategori,hpp,harga'),
   ]);
   if(b.error || m.error){ setSync('error', terjemah(b.error || m.error)); return; }
+  hppReady = !hk.error;
+  if(hppReady) hppSynced = new Map(hk.data.map(r => [r.kunci, JSON.stringify({kunci:r.kunci, menu_id:r.menu_id, nama:r.nama, kategori:r.kategori, hpp:+r.hpp, harga:+r.harga})]));
   const ns = migrate({
     bahan: b.data.map(x => ({id:x.id, nama:x.nama, harga:+x.harga, isi:+x.isi, satuan:x.satuan})),
     produk: m.data.map(r => Object.assign({}, r.data || {}, {id:r.id, nama:r.nama, kategori:r.kategori})),
   });
-  if(silent && JSON.stringify(ns) === JSON.stringify(state)) return;
   if(silent && (dirty || flushing)) return;
-  state = ns; markSaved();
-  if(!state.produk.find(p => p.id === sel)) sel = state.produk[0] ? state.produk[0].id : null;
-  renderOwnerAll(); setSync('synced');
+  const same = JSON.stringify(ns) === JSON.stringify(state);
+  if(!same){
+    state = ns; markSaved();
+    if(!state.produk.find(p => p.id === sel)) sel = state.produk[0] ? state.produk[0].id : null;
+    renderOwnerAll();
+  }
+  try { await syncHpp(); if(!silent || !same) setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
+}
+
+/* ---------- HPP & harga terkini untuk kasir (tabel hpp_terkini) ---------- */
+let hppSynced = new Map(), hppReady = false;
+const r2 = n => Math.round(n*100)/100;
+function hppRows(){
+  const rows = [];
+  state.produk.forEach(p => {
+    const h = hitung(p);
+    if(h.varian.length) h.varian.forEach((vr,vx) => rows.push({kunci:p.id+':'+(vr.v.id||vx), menu_id:p.id, nama:(p.nama||'Tanpa nama')+' · '+(vr.v.nama||'Varian '+(vx+1)), kategori:p.kategori, hpp:r2(vr.hpp), harga:num(vr.v.hargaJual)}));
+    else rows.push({kunci:p.id, menu_id:p.id, nama:p.nama||'Tanpa nama', kategori:p.kategori, hpp:r2(h.hpp), harga:num(p.hargaJual)});
+  });
+  return rows;
+}
+async function syncHpp(){
+  if(!hppReady || !me || me.role !== 'owner') return;
+  const rows = hppRows(), keys = new Set(rows.map(r => r.kunci));
+  const up = rows.filter(r => hppSynced.get(r.kunci) !== JSON.stringify(r));
+  const del = [...hppSynced.keys()].filter(k => !keys.has(k));
+  if(up.length){
+    const now = new Date().toISOString();
+    const {error} = await sb.from('hpp_terkini').upsert(up.map(r => ({...r, updated_at:now})));
+    if(error) throw error;
+    up.forEach(r => hppSynced.set(r.kunci, JSON.stringify(r)));
+  }
+  if(del.length){
+    const {error} = await sb.from('hpp_terkini').delete().in('kunci', del);
+    if(error) throw error;
+    del.forEach(k => hppSynced.delete(k));
+  }
 }
 // Saat kembali ke tab browser, ambil data terbaru (mis. harga dari belanja karyawan)
 document.addEventListener('visibilitychange', () => {
@@ -642,15 +825,15 @@ async function boot(session){
   show('screen-app');
   buildTabs();
   if(me.role === 'owner'){ await loadOwner(); openTab('produk'); }
-  else { await loadStaff(); openTab('resep'); }
+  else { await loadStaff(); openTab('kasir'); }
 }
 
 /* ---------- Tab ---------- */
 const TABS = {
-  owner:[['produk','Menu & HPP'],['bahan','Bahan Baku'],['ringkasan','Ringkasan'],['belanja','Belanja'],['tim','Karyawan']],
-  karyawan:[['resep','Resep & Menu'],['belanja','Catat Belanja']],
+  owner:[['produk','Menu & HPP'],['bahan','Bahan Baku'],['ringkasan','Ringkasan HPP'],['kasir','Kasir'],['laporan','Laporan'],['biaya','Biaya'],['belanja','Belanja'],['tim','Karyawan']],
+  karyawan:[['kasir','Kasir'],['resep','Resep & Menu'],['belanja','Catat Belanja']],
 };
-const ALL_TABS = ['produk','bahan','ringkasan','resep','belanja','tim'];
+const ALL_TABS = ['produk','bahan','ringkasan','kasir','laporan','biaya','resep','belanja','tim'];
 function buildTabs(){
   $('tabs').innerHTML = TABS[me.role].map(([k,l]) => `<button role="tab" type="button" data-tab="${k}" aria-selected="false">${l}</button>`).join('');
 }
@@ -662,6 +845,9 @@ function openTab(name){
   if(name === 'produk') renderEditor();
   if(name === 'belanja'){ renderBelanjaForm(); loadBelanja(); }
   if(name === 'tim') loadTim();
+  if(name === 'kasir'){ loadJual(); loadSaya(); }
+  if(name === 'laporan') loadLaporan();
+  if(name === 'biaya') loadBiaya();
 }
 
 /* =====================================================================
@@ -1114,6 +1300,207 @@ $('timBody').addEventListener('click', async e => {
     res = await sb.from('undangan').delete().eq('email', t.dataset.batal);
   } else return;
   if(res.error) alert(terjemah(res.error)); else loadTim();
+});
+
+/* =====================================================================
+   KASIR (pemilik & karyawan)
+   ===================================================================== */
+let jual = [], cart = new Map(), kFilter = '', kMetode = 'Tunai';
+const jam = s => new Date(s).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+async function loadJual(){
+  const {data, error} = await sb.from('menu_jual').select('kunci,menu_id,nama,kategori,harga').order('kategori').order('nama');
+  if(error){ $('menuGrid').innerHTML = `<p class="msg err">Gagal memuat menu: ${esc(terjemah(error))}. Pastikan file penjualan.sql sudah dijalankan di Supabase.</p>`; return; }
+  jual = data;
+  [...cart.keys()].forEach(k => { if(!jual.find(j => j.kunci === k)) cart.delete(k); });
+  renderGrid(); renderCart();
+}
+function renderGrid(){
+  const list = jual.filter(j => !kFilter || j.kategori === kFilter);
+  $('menuGrid').innerHTML = list.length ? list.map(j => { const q = cart.get(j.kunci) || 0, ok = +j.harga > 0; return `
+    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${ok?'':'disabled title="Harga belum diisi pemilik"'}>
+      ${q ? `<span class="q">${q}</span>` : ''}
+      <span class="n">${esc(j.nama)}</span><span class="p num">${ok ? rp(j.harga) : 'Harga belum diisi'}</span>
+    </button>`; }).join('')
+    : `<p class="note">Belum ada menu yang bisa dijual. ${me && me.role === 'owner' ? 'Isi harga jual di tab Menu & HPP.' : 'Minta pemilik mengisi menu dan harga jual.'}</p>`;
+}
+function renderCart(){
+  const items = [...cart.entries()].map(([k,q]) => ({j: jual.find(x => x.kunci === k), q})).filter(x => x.j);
+  const total = items.reduce((s,x) => s + x.q * +x.j.harga, 0);
+  $('cartList').innerHTML = items.length ? items.map(x => `<div class="citem">
+      <div><div class="n">${esc(x.j.nama)}</div><div class="s num">${rp(x.j.harga)} × ${x.q}</div></div>
+      <div class="qty"><button type="button" data-dec="${esc(x.j.kunci)}" aria-label="Kurangi">−</button><b class="num">${x.q}</b><button type="button" data-inc="${esc(x.j.kunci)}" aria-label="Tambah">+</button></div>
+      <b class="num">${rp(x.q * +x.j.harga)}</b></div>`).join('')
+    : `<p class="note">Ketuk menu di kiri untuk menambahkan pesanan.</p>`;
+  $('cartTotal').textContent = rp(total);
+  $('kSimpan').disabled = !items.length;
+  updateKembali(total);
+}
+function cartTotal(){ return [...cart.entries()].reduce((s,[k,q]) => { const j = jual.find(x => x.kunci === k); return s + (j ? q * +j.harga : 0); }, 0); }
+function updateKembali(total){
+  const bayar = num($('kBayar').value), t = total == null ? cartTotal() : total;
+  $('kTunaiBox').hidden = kMetode !== 'Tunai';
+  const show = kMetode === 'Tunai' && bayar > 0 && t > 0;
+  $('kKembaliRow').hidden = !show;
+  if(show){ const k = bayar - t; $('kKembali').textContent = k >= 0 ? rp(k) : 'Kurang ' + rp(-k); $('kKembali').style.color = k >= 0 ? 'var(--good)' : 'var(--bad)'; }
+}
+$('menuGrid').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]'); if(!b || b.disabled) return;
+  cart.set(b.dataset.k, (cart.get(b.dataset.k) || 0) + 1);
+  msg($('kMsg'), 'info', ''); renderGrid(); renderCart();
+});
+$('cartList').addEventListener('click', e => {
+  const inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]');
+  if(inc) cart.set(inc.dataset.inc, cart.get(inc.dataset.inc) + 1);
+  else if(dec){ const q = cart.get(dec.dataset.dec) - 1; if(q > 0) cart.set(dec.dataset.dec, q); else cart.delete(dec.dataset.dec); }
+  else return;
+  renderGrid(); renderCart();
+});
+$('kFilter').addEventListener('click', e => { const b = e.target.closest('[data-kf]'); if(!b) return; kFilter = b.dataset.kf; $('kFilter').querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', x === b)); renderGrid(); });
+$('kMetode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if(!b) return; kMetode = b.dataset.m; $('kMetode').querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', x === b)); updateKembali(); });
+$('kBayar').addEventListener('input', () => updateKembali());
+$('kSimpan').addEventListener('click', async () => {
+  const m = $('kMsg');
+  const items = [...cart.entries()].map(([kunci, qty]) => ({kunci, qty, nama: (jual.find(j => j.kunci === kunci) || {}).nama}));
+  if(!items.length){ msg(m,'err','Pesanan masih kosong.'); return; }
+  $('kSimpan').disabled = true;
+  try {
+    if(me.role === 'owner' && (dirty || flushing)) await flush();
+    const {data, error} = await sb.rpc('catat_penjualan', {p_metode: kMetode, p_items: items, p_catatan: $('kCatatan').value.trim() || null});
+    if(error) throw error;
+    const bayar = num($('kBayar').value), kembali = kMetode === 'Tunai' && bayar >= data.total ? ` · Kembalian ${rp(bayar - data.total)}` : '';
+    msg(m,'ok',`Tersimpan (#${data.id}) · ${kMetode} ${rp(data.total)}${kembali}`);
+    cart.clear(); $('kCatatan').value = ''; $('kBayar').value = '';
+    renderGrid(); renderCart(); loadSaya();
+  } catch(err){ msg(m,'err',terjemah(err)); $('kSimpan').disabled = false; }
+});
+$('kReload').addEventListener('click', () => { loadJual(); loadSaya(); });
+async function loadSaya(){
+  const {data, error} = await sb.rpc('penjualan_saya', {p_tanggal: null});
+  if(error){ $('sayaBody').innerHTML = `<tr><td colspan="5" class="empty">Gagal memuat: ${esc(terjemah(error))}</td></tr>`; $('sayaStats').innerHTML = ''; return; }
+  const ok = data.filter(r => !r.batal), sum = a => a.reduce((s,r) => s + +r.total, 0);
+  const per = ['Tunai','QRIS','Transfer'].map(mt => ({mt, rows: ok.filter(r => r.metode === mt)}));
+  $('sayaStats').innerHTML = `<div class="stat"><b class="num">${ok.length}</b><span>transaksi</span></div><div class="stat"><b class="num">${rp(sum(ok))}</b><span>total</span></div>` +
+    per.map(x => `<div class="stat"><b class="num">${rp(sum(x.rows))}</b><span>${x.mt} (${x.rows.length})</span></div>`).join('');
+  $('sayaBody').innerHTML = data.length ? data.map(r => `<tr class="${r.batal?'void':''}">
+      <td class="num">${jam(r.waktu)}</td><td>${esc(r.rincian || '')}</td><td>${r.metode}</td><td class="r num">${rp(r.total)}</td>
+      <td style="text-align:right">${r.batal ? '<span class="chip bad" style="text-decoration:none">Batal</span>' : `<button class="btn small" type="button" data-batal-trx="${r.id}">Batalkan</button>`}</td></tr>`).join('')
+    : `<tr><td colspan="5" class="empty">Belum ada transaksi hari ini.</td></tr>`;
+}
+async function batalkanTrx(id, after){
+  if(!confirm('Batalkan transaksi #' + id + '? Transaksi tidak dihitung di laporan.')) return;
+  const {error} = await sb.rpc('batalkan_penjualan', {p_id: +id});
+  if(error) alert(terjemah(error)); else after();
+}
+$('sayaBody').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadSaya); });
+
+/* =====================================================================
+   LAPORAN (pemilik)
+   ===================================================================== */
+const ymd = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0,10); };
+function rentang(){
+  const p = $('lPeriode').value, now = new Date(), d = n => { const x = new Date(now); x.setDate(x.getDate() + n); return ymd(x); };
+  if(p === 'hari') return [d(0), d(0)];
+  if(p === 'kemarin') return [d(-1), d(-1)];
+  if(p === '7') return [d(-6), d(0)];
+  if(p === 'bulan') return [ymd(new Date(now.getFullYear(), now.getMonth(), 1)), d(0)];
+  if(p === 'bulanlalu') return [ymd(new Date(now.getFullYear(), now.getMonth()-1, 1)), ymd(new Date(now.getFullYear(), now.getMonth(), 0))];
+  return [$('lDari').value || d(0), $('lSampai').value || d(0)];
+}
+$('lPeriode').addEventListener('change', () => { if($('lPeriode').value !== 'custom'){ const [a,b] = rentang(); $('lDari').value = a; $('lSampai').value = b; loadLaporan(); } });
+['lDari','lSampai'].forEach(id => $(id).addEventListener('change', () => { $('lPeriode').value = 'custom'; }));
+$('lMuat').addEventListener('click', loadLaporan);
+$('lTrx').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadLaporan); });
+async function fetchAll(build){
+  let out = [], from = 0;
+  for(;;){ const {data, error} = await build().range(from, from + 999); if(error) throw error; out = out.concat(data); if(data.length < 1000) break; from += 1000; }
+  return out;
+}
+async function loadLaporan(){
+  let [dari, sampai] = $('lPeriode').value === 'custom' ? [$('lDari').value, $('lSampai').value] : rentang();
+  if(!dari || !sampai){ msg($('lMsg'),'err','Pilih tanggal dari dan sampai.'); return; }
+  if(dari > sampai) [dari, sampai] = [sampai, dari];
+  $('lDari').value = dari; $('lSampai').value = sampai;
+  msg($('lMsg'),'info','Memuat laporan…');
+  try {
+    const [trx, by] = await Promise.all([
+      fetchAll(() => sb.from('penjualan').select('id,waktu,tanggal,metode,total,total_hpp,batal,catatan,profiles(nama),penjualan_item(nama,qty,harga,hpp)').gte('tanggal', dari).lte('tanggal', sampai).order('waktu', {ascending:false})),
+      fetchAll(() => sb.from('biaya').select('nilai').gte('tanggal', dari).lte('tanggal', sampai)),
+    ]);
+    msg($('lMsg'),'info','');
+    renderLaporan(trx, by, dari, sampai);
+  } catch(err){ msg($('lMsg'),'err','Gagal memuat laporan: ' + terjemah(err) + '. Pastikan file penjualan.sql sudah dijalankan.'); }
+}
+function renderLaporan(trx, by, dari, sampai){
+  const ok = trx.filter(t => !t.batal);
+  const omzet = ok.reduce((s,t) => s + +t.total, 0), hpp = ok.reduce((s,t) => s + +t.total_hpp, 0);
+  const kotor = omzet - hpp, biaya = by.reduce((s,b) => s + +b.nilai, 0), bersih = kotor - biaya;
+  const tile = (l, v, s, col) => `<div class="tile"><div class="label">${l}</div><div class="v num" ${col?`style="color:${col}"`:''}>${v}</div><div class="s">${s}</div></div>`;
+  $('lTiles').innerHTML =
+    tile('Omzet', rp(omzet), `${ok.length} transaksi · rata-rata ${rp(ok.length ? omzet/ok.length : 0)}`) +
+    tile('HPP terjual', rp(hpp), omzet ? pct(hpp/omzet) + ' dari omzet' : '–') +
+    tile('Laba kotor', rp(kotor), omzet ? 'margin ' + pct(kotor/omzet) : '–', kotor < 0 ? 'var(--bad)' : '') +
+    tile('Biaya operasional', rp(biaya), 'dari tab Biaya') +
+    tile('Laba bersih', rp(bersih), dari === sampai ? tgl(dari) : `${tgl(dari)} – ${tgl(sampai)}`, bersih < 0 ? 'var(--bad)' : 'var(--good)');
+
+  const grp = (arr, key) => { const m = new Map(); arr.forEach(x => { const k = key(x); if(!m.has(k)) m.set(k, []); m.get(k).push(x); }); return m; };
+  const hari = [...grp(ok, t => t.tanggal).entries()].sort((a,b) => a[0] < b[0] ? 1 : -1).map(([d, ts]) => ({d, n: ts.length, o: ts.reduce((s,t) => s + +t.total, 0), k: ts.reduce((s,t) => s + +t.total - +t.total_hpp, 0)}));
+  const maxO = Math.max(1, ...hari.map(h => h.o));
+  $('lHari').innerHTML = hari.length ? hari.map(h => `<tr><td style="white-space:nowrap">${tgl(h.d)}</td><td class="r num">${h.n}</td><td class="r num">${rp(h.o)}</td><td class="r num">${rp(h.k)}</td><td><div class="hbar" style="width:${h.o/maxO*100}%"></div></td></tr>`).join('') : `<tr><td colspan="5" class="empty">Belum ada penjualan.</td></tr>`;
+
+  const menu = new Map();
+  ok.forEach(t => (t.penjualan_item || []).forEach(i => { const x = menu.get(i.nama) || {q:0,o:0,k:0}; x.q += i.qty; x.o += i.qty * +i.harga; x.k += i.qty * (+i.harga - +i.hpp); menu.set(i.nama, x); }));
+  const menus = [...menu.entries()].sort((a,b) => b[1].q - a[1].q);
+  $('lMenu').innerHTML = menus.length ? menus.map(([n,x]) => `<tr><td>${esc(n)}</td><td class="r num">${x.q}</td><td class="r num">${rp(x.o)}</td><td class="r num" style="color:${x.k<0?'var(--bad)':'inherit'}">${rp(x.k)}</td></tr>`).join('') : `<tr><td colspan="4" class="empty">–</td></tr>`;
+
+  const kar = [...grp(ok, t => (t.profiles && t.profiles.nama) || '–').entries()].map(([n, ts]) => ({n, c: ts.length, o: ts.reduce((s,t) => s + +t.total, 0)})).sort((a,b) => b.o - a.o);
+  $('lKaryawan').innerHTML = kar.length ? kar.map(x => `<tr><td>${esc(x.n)}</td><td class="r num">${x.c}</td><td class="r num">${rp(x.o)}</td></tr>`).join('') : `<tr><td colspan="3" class="empty">–</td></tr>`;
+
+  $('lMetode').innerHTML = ['Tunai','QRIS','Transfer'].map(mt => { const ts = ok.filter(t => t.metode === mt); return `<tr><td>${mt}</td><td class="r num">${ts.length}</td><td class="r num">${rp(ts.reduce((s,t) => s + +t.total, 0))}</td></tr>`; }).join('');
+
+  const show = trx.slice(0, 300);
+  $('lTrx').innerHTML = show.length ? show.map(t => `<tr class="${t.batal?'void':''}">
+      <td style="white-space:nowrap">${tgl(t.tanggal)} ${jam(t.waktu)}</td><td>${esc((t.profiles && t.profiles.nama) || '–')}</td>
+      <td>${esc((t.penjualan_item || []).map(i => i.qty + '× ' + i.nama).join(', '))}${t.catatan ? `<div class="note">${esc(t.catatan)}</div>` : ''}</td>
+      <td>${t.metode}</td><td class="r num">${rp(t.total)}</td><td class="r num">${rp(+t.total - +t.total_hpp)}</td>
+      <td style="text-align:right">${t.batal ? '<span class="chip bad" style="text-decoration:none">Batal</span>' : `<button class="btn small" type="button" data-batal-trx="${t.id}">Batalkan</button>`}</td></tr>`).join('')
+    + (trx.length > 300 ? `<tr><td colspan="7" class="note">Menampilkan 300 transaksi terbaru dari ${trx.length}.</td></tr>` : '')
+    : `<tr><td colspan="7" class="empty">Belum ada transaksi di periode ini.</td></tr>`;
+}
+
+/* =====================================================================
+   BIAYA OPERASIONAL (pemilik)
+   ===================================================================== */
+async function loadBiaya(){
+  if(!$('byTanggal').value) $('byTanggal').value = today();
+  if(!$('byBulan').value) $('byBulan').value = today().slice(0,7);
+  const [y, mo] = $('byBulan').value.split('-').map(Number);
+  const dari = `${y}-${String(mo).padStart(2,'0')}-01`, sampai = ymd(new Date(y, mo, 0));
+  const {data, error} = await sb.from('biaya').select('*').gte('tanggal', dari).lte('tanggal', sampai).order('tanggal', {ascending:false}).order('id', {ascending:false});
+  if(error){ $('byBody').innerHTML = `<tr><td colspan="5" class="empty">Gagal memuat: ${esc(terjemah(error))}. Pastikan file penjualan.sql sudah dijalankan.</td></tr>`; $('byStats').innerHTML = ''; return; }
+  const total = data.reduce((s,b) => s + +b.nilai, 0), perKat = new Map();
+  data.forEach(b => perKat.set(b.kategori, (perKat.get(b.kategori) || 0) + +b.nilai));
+  $('byStats').innerHTML = `<div class="stat"><b class="num">${rp(total)}</b><span>total bulan ini</span></div>` + [...perKat.entries()].sort((a,b) => b[1]-a[1]).map(([k,v]) => `<div class="stat"><b class="num">${rp(v)}</b><span>${esc(k)}</span></div>`).join('');
+  $('byBody').innerHTML = data.length ? data.map(b => `<tr><td style="white-space:nowrap">${tgl(b.tanggal)}</td><td>${esc(b.kategori)}</td><td>${esc(b.keterangan || '')}</td><td class="r num">${rp(b.nilai)}</td><td><button class="btn ghost" type="button" title="Hapus biaya" aria-label="Hapus biaya" data-del-by="${b.id}">✕</button></td></tr>`).join('') : `<tr><td colspan="5" class="empty">Belum ada biaya di bulan ini.</td></tr>`;
+}
+$('byBulan').addEventListener('change', loadBiaya);
+$('byForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const m = $('byMsg'), nilai = num($('byNilai').value);
+  if(!(nilai > 0)){ msg(m,'err','Isi jumlah biaya.'); return; }
+  $('bySubmit').disabled = true;
+  const {error} = await sb.from('biaya').insert({tanggal: $('byTanggal').value || today(), kategori: $('byKategori').value, keterangan: $('byKet').value.trim() || null, nilai});
+  $('bySubmit').disabled = false;
+  if(error){ msg(m,'err',terjemah(error)); return; }
+  msg(m,'ok',`Tersimpan: ${$('byKategori').value} ${rp(nilai)}.`);
+  $('byKet').value = ''; $('byNilai').value = '';
+  $('byBulan').value = ($('byTanggal').value || today()).slice(0,7);
+  loadBiaya();
+});
+$('byBody').addEventListener('click', async e => {
+  const b = e.target.closest('[data-del-by]'); if(!b) return;
+  if(!confirm('Hapus biaya ini?')) return;
+  const {error} = await sb.from('biaya').delete().eq('id', b.dataset.delBy);
+  if(error) alert(terjemah(error)); else loadBiaya();
 });
 
 })();
