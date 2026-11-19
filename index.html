@@ -124,6 +124,10 @@ tbody tr:last-child td{border-bottom:0}
 .items td:nth-child(5){width:100px;white-space:nowrap}
 .items td:nth-child(6),.bahan td:last-child{width:36px}
 
+.tetap-box{background:var(--accent-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.tetap-list{display:flex;flex-wrap:wrap;gap:8px 18px}
+.cek{display:inline-flex;align-items:center;gap:8px;font-weight:500;cursor:pointer;min-height:34px}
+.cek input{width:18px;height:18px;accent-color:var(--accent);margin:0}
 .menu-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:5}
 .yield{background:var(--kue-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .yield-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,.8fr);gap:10px;align-items:end}
@@ -358,10 +362,27 @@ details.card>summary{cursor:pointer;list-style-position:inside}
 
     <!-- PEMILIK: Bahan -->
     <section id="tab-bahan" hidden>
+      <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="panel card" id="tetapPanel">
+        <div class="sub">
+          <div>
+            <h2>Biaya tetap per cup kopi</h2>
+            <p class="note">Otomatis masuk ke HPP setiap menu kopi, jadi cup dan es batu tidak perlu dicatat sebagai bahan. Kalau ada menu yang tidak memakainya (misalnya kopi panas tanpa es), hilangkan centangnya di menu itu.</p>
+          </div>
+          <b class="big-price num" id="tetapSum"></b>
+        </div>
+        <p class="msg err" id="tetapWarn" hidden>Biaya tetap belum bisa disimpan. Jalankan file biaya-tetap.sql di Supabase.</p>
+        <div class="msg info" id="pindahBox" hidden></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Nama</th><th class="r">Biaya per cup (Rp)</th><th></th></tr></thead>
+          <tbody id="tetapBody"></tbody>
+        </table></div>
+        <div><button class="btn" type="button" id="tetapTambah">+ Biaya tetap</button></div>
+      </div>
       <div class="panel card">
         <div class="sub">
           <div>
-            <h2>Bahan baku & kemasan</h2>
+            <h2>Bahan baku</h2>
             <p class="note">Bahan dipisah: <b>Kopi</b> khusus menu kopi, <b>Kue</b> khusus menu kue. Bahan yang dipakai keduanya (misalnya susu) dibuat di masing-masing kelompok, jadi harganya juga bisa berbeda. Pindahkan kelompok lewat kolom “Kelompok”. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
           </div>
         </div>
@@ -371,6 +392,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
             <tbody id="bahanBody"></tbody>
           </table>
         </div>
+      </div>
       </div>
     </section>
 
@@ -669,8 +691,8 @@ function contoh(){
   const b = (nama,harga,isi,satuan) => ({id:uid(),nama,harga,isi,satuan});
   const B = {
     kopi:b('Biji kopi arabika',250000,1000,'gr'), susu:b('Susu UHT full cream',20000,1000,'ml'), susu2:b('Susu UHT full cream',20000,1000,'ml'),
-    aren:b('Sirup gula aren',45000,1000,'ml'), es:b('Es batu kristal',8000,5000,'gr'),
-    cup:b('Cup plastik 16 oz + tutup',40000,50,'pcs'), sedotan:b('Sedotan',15000,100,'pcs'),
+    aren:b('Sirup gula aren',45000,1000,'ml'),
+    sedotan:b('Sedotan',15000,100,'pcs'),
     tepung:b('Tepung terigu protein sedang',14000,1000,'gr'), telur:b('Telur ayam',30000,1000,'gr'),
     mentega:b('Mentega',90000,1000,'gr'), gula:b('Gula pasir',17000,1000,'gr'),
     coklat:b('Dark chocolate compound',60000,500,'gr'), cocoa:b('Coklat bubuk',55000,250,'gr'),
@@ -682,10 +704,10 @@ function contoh(){
   Object.entries(B).forEach(([k, x]) => { x.kategori = ['kopi','susu','aren','es','cup','sedotan'].includes(k) ? 'Kopi' : 'Kue'; });
   return { bahan:Object.values(B), produk:[
     {id:uid(),nama:'Es Kopi Susu Gula Aren',kategori:'Kopi',hasil:1,potong:1,margin:55,hargaJual:22000,
-      items:[it(B.kopi,18),it(B.susu,150),it(B.aren,25),it(B.es,150),it(B.cup,1),it(B.sedotan,1)],
+      items:[it(B.kopi,18),it(B.susu,150),it(B.aren,25),it(B.sedotan,1)],
       lain:[{nama:'Tenaga kerja barista',nilai:1500},{nama:'Listrik & air',nilai:500}],varian:[]},
     {id:uid(),nama:'Iced Americano',kategori:'Kopi',hasil:1,potong:1,margin:60,hargaJual:18000,
-      items:[it(B.kopi,18),it(B.es,180),it(B.cup,1),it(B.sedotan,1)],
+      items:[it(B.kopi,18),it(B.sedotan,1)],
       lain:[{nama:'Tenaga kerja barista',nilai:1500},{nama:'Listrik & air',nilai:500}],varian:[]},
     {id:uid(),nama:'Brownies Panggang',kategori:'Kue',hasil:1,potong:16,margin:55,hargaJual:12000,
       items:[it(B.coklat,200),it(B.mentega,150),it(B.gula,200),it(B.telur,200),it(B.tepung,120),it(B.cocoa,30),it(B.box,1,'porsi')],
@@ -703,6 +725,9 @@ function contoh(){
 }
 
 /* ---------- State ---------- */
+// Biaya tetap per cup untuk semua menu kopi (diatur pemilik di tab Bahan Baku)
+const TETAP_AWAL = [{id:'cup', nama:'Cup + tutup', biaya:800}, {id:'es', nama:'Es batu', biaya:250}];
+let biayaTetap = TETAP_AWAL.map(t => ({...t})), tetapReady = false, tetapTimer = null;
 let me = null;                         // profil yang login
 let state = {bahan:[], produk:[]};     // data pemilik
 let staff = {bahan:[], menu:[]};       // data karyawan (versi umum)
@@ -716,6 +741,7 @@ function migrate(st){
     if(!Array.isArray(p.items)) p.items = [];
     if(!Array.isArray(p.lain)) p.lain = [];
     if(!Array.isArray(p.varian)) p.varian = [];
+    if(!Array.isArray(p.tetapOff)) p.tetapOff = [];
     p.items.forEach(i => { if(!i.per) i.per = 'resep'; });
     if(p.margin == null) p.margin = 55;
     if(p.hargaJual == null) p.hargaJual = 0;
@@ -773,6 +799,9 @@ async function loadOwner(silent){
     sb.from('menu').select('id,nama,kategori,data').order('created_at'),
     sb.from('hpp_terkini').select('kunci,menu_id,nama,kategori,hpp,harga'),
   ]);
+  const pg = await sb.from('pengaturan').select('kunci,nilai').eq('kunci', 'biaya_tetap_kopi').maybeSingle();
+  tetapReady = !pg.error;
+  if(pg.data && pg.data.nilai && Array.isArray(pg.data.nilai.items)) biayaTetap = pg.data.nilai.items.map(t => ({id: t.id || uid(), nama: t.nama || '', biaya: num(t.biaya)}));
   // bahan-kategori.sql belum dijalankan: muat tanpa kolom kategori
   katReady = !(b.error && /kategori/i.test(b.error.message || ''));
   if(!katReady) b = await sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at');
@@ -792,6 +821,82 @@ async function loadOwner(silent){
     renderOwnerAll();
   }
   try { await syncHpp(); if(!silent || !same) setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
+}
+
+/* ---------- Biaya tetap per cup kopi ---------- */
+function simpanTetap(){
+  if(!me || me.role !== 'owner') return;
+  renderTetapInfo();
+  if(!tetapReady){ setSync('error', 'Jalankan biaya-tetap.sql di Supabase supaya biaya tetap tersimpan.'); return; }
+  setSync('saving'); clearTimeout(tetapTimer);
+  tetapTimer = setTimeout(async () => {
+    const {error} = await sb.from('pengaturan').upsert({kunci:'biaya_tetap_kopi', nilai:{items: biayaTetap}, updated_at: new Date().toISOString()});
+    if(error){ setSync('error', terjemah(error)); return; }
+    try { await syncHpp(); setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
+  }, 800);
+}
+function renderTetap(){
+  const el = $('tetapBody'); if(!el) return;
+  el.innerHTML = biayaTetap.length ? biayaTetap.map((t,i) => `<tr>
+      <td><input type="text" id="tt-n-${i}" data-tt="${i}" data-f="nama" value="${esc(t.nama)}" placeholder="mis. Cup + tutup"></td>
+      <td style="width:170px"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="tt-b-${i}" data-tt="${i}" data-f="biaya" value="${fmtU(t.biaya)}"></td>
+      <td style="width:36px"><button class="btn ghost" type="button" title="Hapus" aria-label="Hapus biaya tetap" data-del-tt="${i}">✕</button></td></tr>`).join('')
+    : `<tr><td colspan="3" class="note" style="padding:10px 6px">Belum ada biaya tetap.</td></tr>`;
+  $('tetapWarn').hidden = tetapReady;
+  renderTetapInfo();
+  renderPindahTetap();
+}
+function renderTetapInfo(){ const el = $('tetapSum'); if(el) el.textContent = rp(biayaTetap.reduce((s,t) => s + num(t.biaya), 0)) + ' per cup'; }
+document.addEventListener('input', e => {
+  const t = e.target; if(t.dataset.tt == null || !t.closest('#tetapBody')) return;
+  const x = biayaTetap[+t.dataset.tt]; if(!x) return;
+  x[t.dataset.f] = t.dataset.f === 'biaya' ? num(t.value) : t.value;
+  simpanTetap(); renderList(); renderSummary();
+});
+document.addEventListener('click', e => {
+  if(e.target.closest('#tetapTambah')){ biayaTetap.push({id: uid(), nama: '', biaya: 0}); renderTetap(); simpanTetap(); const n = $('tt-n-' + (biayaTetap.length - 1)); n && n.focus(); return; }
+  const d = e.target.closest('[data-del-tt]');
+  if(d){ const x = biayaTetap[+d.dataset.delTt]; if(!confirm(`Hapus biaya tetap “${x.nama}”? Semua menu kopi ikut berubah HPP-nya.`)) return; biayaTetap.splice(+d.dataset.delTt, 1); renderTetap(); simpanTetap(); renderList(); renderSummary(); return; }
+  if(e.target.closest('#pindahTetap')) pindahkanCupEs();
+});
+
+// Cup & es batu yang dulu dicatat sebagai bahan di resep kopi -> dipindah ke biaya tetap
+const polaCup = /\b(cup|gelas)\b/i, polaEs = /\bes\s*batu\b|\bice\s*cube\b/i;
+function calonTetap(){
+  return state.bahan.filter(b => katBahan(b) === 'Kopi' && (polaCup.test(b.nama || '') || polaEs.test(b.nama || '')));
+}
+function renderPindahTetap(){
+  const el = $('pindahBox'); if(!el) return;
+  const xs = calonTetap();
+  el.hidden = !xs.length;
+  if(xs.length) el.innerHTML = `<div class="sub"><div><b>Cup / es batu masih tercatat sebagai bahan:</b> ${xs.map(b => esc(b.nama)).join(', ')}.<div class="note">Pindahkan ke biaya tetap: biaya per cup dihitung dari harga bahan &amp; takaran di resep, bahannya dihapus dari daftar, dan menu yang tidak memakainya (misalnya kopi panas tanpa es) otomatis tidak dicentang.</div></div><button class="btn primary" type="button" id="pindahTetap">Pindahkan ke biaya tetap</button></div>`;
+}
+function pindahkanCupEs(){
+  const xs = calonTetap(); if(!xs.length) return;
+  if(!confirm(`Pindahkan ${xs.map(b => b.nama).join(', ')} ke biaya tetap per cup? Bahan ini akan dihapus dari daftar bahan dan dari resep kopi.`)) return;
+  const kopi = state.produk.filter(p => p.kategori === 'Kopi');
+  const perCup = (p, i) => { const b = bahanById(i.bahanId); const porsi = Math.max(num(p.hasil), 1); return hargaSatuan(b) * num(i.qty) / (i.per === 'porsi' ? 1 : porsi); };
+  const median = a => { const s = [...a].sort((x,y) => x-y); return s.length ? s[Math.floor(s.length/2)] : 0; };
+  const target = id => biayaTetap.find(t => t.id === id) || (biayaTetap.push({id, nama: id === 'cup' ? 'Cup + tutup' : 'Es batu', biaya: 0}), biayaTetap[biayaTetap.length - 1]);
+  ['cup','es'].forEach(jenis => {
+    const pola = jenis === 'cup' ? polaCup : polaEs;
+    const ids = xs.filter(b => pola.test(b.nama || '') && !(jenis === 'cup' && polaEs.test(b.nama || ''))).map(b => b.id);
+    if(!ids.length) return;
+    const biayaMenu = kopi.map(p => p.items.filter(i => ids.includes(i.bahanId)).reduce((s,i) => s + perCup(p, i), 0)).filter(v => v > 0);
+    const t = target(jenis);
+    if(biayaMenu.length) t.biaya = Math.round(median(biayaMenu));
+    else { const b = bahanById(ids[0]); t.biaya = Math.round(hargaSatuan(b) * (jenis === 'cup' ? 1 : 150)); }
+    kopi.forEach(p => {
+      const pakai = p.items.some(i => ids.includes(i.bahanId));
+      p.tetapOff = (p.tetapOff || []).filter(x => x !== jenis);
+      if(!pakai) p.tetapOff.push(jenis);
+      p.items = p.items.filter(i => !ids.includes(i.bahanId));
+    });
+  });
+  const hapus = new Set(xs.map(b => b.id));
+  state.bahan = state.bahan.filter(b => !hapus.has(b.id));
+  save(); simpanTetap(); renderOwnerAll(); renderTetap();
+  toast('✓ Cup & es batu dipindah ke biaya tetap', 'ok');
 }
 
 // Bahan dari kelompok lama "Umum" dipindah ke Kopi/Kue sesuai resep yang memakainya.
@@ -866,7 +971,14 @@ function hitung(p){
   const baris = p.items.map(i => { const b = bahanById(i.bahanId); return {b, biaya: hargaSatuan(b)*num(i.qty)*(i.per==='porsi'?porsi:1)}; });
   const totalBahan = baris.reduce((s,x)=>s+x.biaya,0);
   const totalLain = p.lain.reduce((s,x)=>s+num(x.nilai),0);
-  const hpp = (totalBahan+totalLain)/porsi;
+  // Biaya tetap per cup (cup + tutup, es batu) — hanya menu kopi, bisa dimatikan per menu
+  // (kalau cup/es masih tercatat sebagai bahan di resep ini, biaya tetapnya dilewati supaya tidak dihitung dua kali)
+  const adaBahan = pola => p.items.some(i => pola.test((bahanById(i.bahanId) || {}).nama || ''));
+  const tetapDipakai = p.kategori === 'Kopi' ? biayaTetap.filter(t => !(p.tetapOff || []).includes(t.id)
+    && !(t.id === 'cup' && adaBahan(polaCup)) && !(t.id === 'es' && adaBahan(polaEs))) : [];
+  const tetapPerPorsi = tetapDipakai.reduce((s,t) => s + num(t.biaya), 0);
+  const totalTetap = tetapPerPorsi * porsi;
+  const hpp = (totalBahan+totalLain+totalTetap)/porsi;
   const m = Math.min(num(p.margin),95)/100;
   const saran = hpp > 0 ? bulat(hpp/(1-m)) : 0;
   const jual = num(p.hargaJual);
@@ -880,7 +992,7 @@ function hitung(p){
     return {v, baris:vb, n, extra, hpp:hv, saran: hv>0 ? bulat(hv/(1-m)) : 0, jual:jv, laba:lv, fc: jv>0 ? hv/jv : Infinity, marginAktual: jv>0 ? lv/jv : -Infinity};
   }) : [];
   const totalVarian = varian.reduce((s,x)=>s+num(x.v.jumlah),0);
-  return {varian,totalVarian,baris,totalBahan,totalLain,hasil,potong,porsi,hpp,saran,jual,laba,fc,marginAktual: jual>0 ? laba/jual : -Infinity};
+  return {varian,totalVarian,baris,totalBahan,totalLain,totalTetap,tetapPerPorsi,tetapDipakai,hasil,potong,porsi,hpp,saran,jual,laba,fc,marginAktual: jual>0 ? laba/jual : -Infinity};
 }
 function status(p, h){
   if(h.jual <= 0) return {cls:'warn', t:'Harga jual belum diisi'};
@@ -1020,7 +1132,7 @@ function renderOwnerAll(){ renderBahan(); renderList(); if(currentTab === 'produ
 function contohButton(){ return state.bahan.length || state.produk.length ? '' : `<p style="margin-top:12px"><button class="btn primary" type="button" data-isi-contoh>Isi dengan data contoh</button></p>`; }
 document.addEventListener('click', e => {
   if(!e.target.closest('[data-isi-contoh]')) return;
-  pendingMenu.clear(); state = migrate(contoh()); sel = state.produk[0].id; save(); renderOwnerAll();
+  pendingMenu.clear(); state = migrate(contoh()); sel = state.produk[0].id; save(); simpanTetap(); renderOwnerAll();
 });
 
 function renderList(){
@@ -1063,6 +1175,14 @@ function bahanOptions(selId, list, pref){
     const xs = sorted.filter(b => kat(b) === k);
     return xs.length ? `<optgroup label="${label[k]}">${xs.map(opt).join('')}</optgroup>` : '';
   }).join('');
+}
+function tetapSection(p){
+  const off = p.tetapOff || [];
+  return `<div class="tetap-box">
+    <div class="sub"><h3>Biaya tetap per cup</h3><b class="num" id="tetapTotal"></b></div>
+    <div class="tetap-list">${biayaTetap.length ? biayaTetap.map(t => `<label class="cek"><input type="checkbox" data-tetap="${esc(t.id)}" ${off.includes(t.id) ? '' : 'checked'}> ${esc(t.nama) || 'Tanpa nama'} <span class="muted num">${rp(t.biaya)}</span></label>`).join('') : '<span class="note">Belum ada biaya tetap. Atur di tab Bahan Baku.</span>'}</div>
+    <p class="note">Nilainya diatur di tab Bahan Baku dan berlaku untuk semua menu kopi. Hilangkan centang kalau menu ini tidak memakainya.</p>
+  </div>`;
 }
 function varianSection(p){
   const vs = p.varian;
@@ -1171,7 +1291,7 @@ function renderEditor(){
         </table></div>
       </div>
 
-      ${kue ? varianSection(p) : ''}
+      ${kue ? varianSection(p) : tetapSection(p)}
 
       <div class="row3" style="grid-template-columns:1fr 1fr">
         <label class="field"><span>Target margin laba (%)</span><input type="number" min="0" max="95" step="1" id="pMargin" data-p="margin" value="${p.margin}"></label>
@@ -1199,7 +1319,8 @@ function updateComputed(){
     const vw = $('varWarn');
     if(vw) vw.innerHTML = h.varian.length && h.totalVarian !== h.porsi ? `<p class="warnbox">Jumlah semua varian ${h.totalVarian} pcs, sedangkan hasil adonan ${h.porsi} pcs. Samakan supaya hitungan tepat, atau klik “Bagi rata”.</p>` : '';
     const st = status(p,h);
-    const perBahan = h.totalBahan/h.porsi, perLain = h.totalLain/h.porsi, tot = perBahan+perLain || 1;
+    const perBahan = h.totalBahan/h.porsi, perLain = h.totalLain/h.porsi, perTetap = h.tetapPerPorsi, tot = perBahan+perLain+perTetap || 1;
+    const tt = $('tetapTotal'); if(tt) tt.textContent = rp(h.tetapPerPorsi) + ' per cup';
     const top = h.baris.filter(x=>x.b).sort((a,b)=>b.biaya-a.biaya).slice(0,3);
     const unit = unitOf(p), kue = p.kategori === 'Kue';
     const yt = $('yieldTotal'); if(yt) yt.textContent = `${h.porsi} ${unit}`;
@@ -1208,14 +1329,15 @@ function updateComputed(){
       <div>
         <div class="label">${h.varian.length ? 'HPP adonan dasar per '+unit+' (belum isian)' : 'HPP per '+unit}</div>
         <div class="hpp-big num" style="margin-top:6px">${rp(h.hpp)}</div>
-        <div class="note" style="margin-top:4px">Modal 1 ${kue?'adonan':'resep'} ${rp(h.totalBahan+h.totalLain)} ÷ ${kue && h.potong>1 ? `(${h.hasil} loyang × ${h.potong} potong) = ` : ''}${h.porsi} ${unit}</div>
+        <div class="note" style="margin-top:4px">Modal 1 ${kue?'adonan':'resep'} ${rp(h.totalBahan+h.totalLain+h.totalTetap)} ÷ ${kue && h.potong>1 ? `(${h.hasil} loyang × ${h.potong} potong) = ` : ''}${h.porsi} ${unit}</div>
         ${kue && h.potong>1 ? `<div class="kv" style="margin-top:8px"><span>HPP per loyang utuh</span><b class="num">${rp(h.hpp*h.potong)}</b></div><div class="kv"><span>Harga jual per loyang (${h.potong} potong)</span><b class="num">${h.jual>0?rp(h.jual*h.potong):'–'}</b></div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <div class="bar" role="img" aria-label="Porsi bahan dan biaya lain"><span style="width:${perBahan/tot*100}%;background:var(--accent)"></span><span style="width:${perLain/tot*100}%;background:var(--kue)"></span></div>
+        <div class="bar" role="img" aria-label="Porsi bahan dan biaya lain"><span style="width:${perBahan/tot*100}%;background:var(--accent)"></span><span style="width:${perLain/tot*100}%;background:var(--kue)"></span><span style="width:${perTetap/tot*100}%;background:var(--muted)"></span></div>
         <div class="legend">
           <div><span><i style="background:var(--accent)"></i>Bahan & kemasan</span><span class="num">${rp(perBahan)}</span></div>
           <div><span><i style="background:var(--kue)"></i>Biaya lain</span><span class="num">${rp(perLain)}</span></div>
+          ${p.kategori === 'Kopi' ? `<div><span><i style="background:var(--muted)"></i>Biaya tetap (${h.tetapDipakai.map(t => esc(t.nama)).join(', ') || 'tidak ada'})</span><span class="num">${rp(perTetap)}</span></div>` : ''}
         </div>
       </div>
       ${h.varian.length ? varianResult(p,h) : `<div class="suggest">
@@ -1240,7 +1362,8 @@ function updateComputed(){
 const editorEl = $('editor');
 editorEl.addEventListener('input', e => {
   const t = e.target, p = state.produk.find(x => x.id === sel); if(!p) return;
-  if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ renderList(); renderEditor(); return; } }
+  if(t.dataset.tetap!=null){ p.tetapOff = (p.tetapOff||[]).filter(x => x !== t.dataset.tetap); if(!t.checked) p.tetapOff.push(t.dataset.tetap); tandaiMenu(p); }
+  else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ renderList(); renderEditor(); return; } }
   else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
   else if(t.dataset.vf){ const v = p.varian[+t.dataset.v]; v[t.dataset.vf] = t.dataset.vf==='nama' ? t.value : num(t.value); tandaiMenu(p); }
   else if(t.dataset.item!=null){ const i = p.items[+t.dataset.item]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
@@ -1314,6 +1437,7 @@ function batalMenu(p){
 const KAT_BAHAN = [['Kopi','☕ Bahan kopi','dot'],['Kue','🍰 Bahan kue','dot kue']];
 const katBahan = b => (b && b.kategori === 'Kue') ? 'Kue' : 'Kopi';
 function renderBahan(){
+  renderTetap();
   const body = $('bahanBody');
   if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. Klik “+ Tambah” di salah satu kelompok.${contohButton()}</td></tr>`; }
   const baris = b => `<tr>
