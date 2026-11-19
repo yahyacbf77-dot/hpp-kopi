@@ -124,6 +124,7 @@ tbody tr:last-child td{border-bottom:0}
 .items td:nth-child(5){width:100px;white-space:nowrap}
 .items td:nth-child(6),.bahan td:last-child{width:36px}
 
+.menu-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:5}
 .yield{background:var(--kue-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .yield-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,.8fr);gap:10px;align-items:end}
 .yield-row .x{font-family:var(--f-display);font-size:20px;font-weight:600;color:var(--kue);padding-bottom:6px}
@@ -361,7 +362,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
         <div class="sub">
           <div>
             <h2>Bahan baku & kemasan</h2>
-            <p class="note">Bahan dipisah per kelompok: <b>Kopi</b>, <b>Kue</b>, dan <b>Umum</b> (dipakai keduanya, misalnya gula, susu, kemasan). Pindahkan kelompok lewat kolom “Kelompok”. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
+            <p class="note">Bahan dipisah: <b>Kopi</b> khusus menu kopi, <b>Kue</b> khusus menu kue. Bahan yang dipakai keduanya (misalnya susu) dibuat di masing-masing kelompok, jadi harganya juga bisa berbeda. Pindahkan kelompok lewat kolom “Kelompok”. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
           </div>
         </div>
         <div class="tbl-wrap">
@@ -667,7 +668,7 @@ function terjemah(e){
 function contoh(){
   const b = (nama,harga,isi,satuan) => ({id:uid(),nama,harga,isi,satuan});
   const B = {
-    kopi:b('Biji kopi arabika',250000,1000,'gr'), susu:b('Susu UHT full cream',20000,1000,'ml'),
+    kopi:b('Biji kopi arabika',250000,1000,'gr'), susu:b('Susu UHT full cream',20000,1000,'ml'), susu2:b('Susu UHT full cream',20000,1000,'ml'),
     aren:b('Sirup gula aren',45000,1000,'ml'), es:b('Es batu kristal',8000,5000,'gr'),
     cup:b('Cup plastik 16 oz + tutup',40000,50,'pcs'), sedotan:b('Sedotan',15000,100,'pcs'),
     tepung:b('Tepung terigu protein sedang',14000,1000,'gr'), telur:b('Telur ayam',30000,1000,'gr'),
@@ -678,7 +679,7 @@ function contoh(){
     keju:b('Keju cheddar',75000,1000,'gr'), pisang:b('Pisang raja',20000,1000,'gr'), sosis:b('Sosis sapi',45000,20,'pcs'),
   };
   const it = (bh,qty,per='resep') => ({bahanId:bh.id,qty,per});
-  Object.entries(B).forEach(([k, x]) => { x.kategori = ['kopi','aren','es','cup','sedotan'].includes(k) ? 'Kopi' : ['susu','gula'].includes(k) ? 'Umum' : 'Kue'; });
+  Object.entries(B).forEach(([k, x]) => { x.kategori = ['kopi','susu','aren','es','cup','sedotan'].includes(k) ? 'Kopi' : 'Kue'; });
   return { bahan:Object.values(B), produk:[
     {id:uid(),nama:'Es Kopi Susu Gula Aren',kategori:'Kopi',hasil:1,potong:1,margin:55,hargaJual:22000,
       items:[it(B.kopi,18),it(B.susu,150),it(B.aren,25),it(B.es,150),it(B.cup,1),it(B.sedotan,1)],
@@ -690,7 +691,7 @@ function contoh(){
       items:[it(B.coklat,200),it(B.mentega,150),it(B.gula,200),it(B.telur,200),it(B.tepung,120),it(B.cocoa,30),it(B.box,1,'porsi')],
       lain:[{nama:'Gas / listrik oven',nilai:6000},{nama:'Tenaga kerja',nilai:15000}],varian:[]},
     {id:uid(),nama:'Roti Manis Aneka Isi',kategori:'Kue',hasil:20,potong:1,margin:40,hargaJual:0,
-      items:[it(B.terigu2,500),it(B.gula,80),it(B.telur,100),it(B.mentega,60),it(B.susu,200),it(B.ragi,11),it(B.plastik,1,'porsi')],
+      items:[it(B.terigu2,500),it(B.gula,80),it(B.telur,100),it(B.mentega,60),it(B.susu2,200),it(B.ragi,11),it(B.plastik,1,'porsi')],
       lain:[{nama:'Gas / listrik oven',nilai:8000},{nama:'Tenaga kerja',nilai:20000}],
       varian:[
         {id:uid(),nama:'Coklat',jumlah:5,hargaJual:7000,items:[it(B.coklat,15,'porsi')]},
@@ -708,7 +709,7 @@ let staff = {bahan:[], menu:[]};       // data karyawan (versi umum)
 let sel = null, rsel = null, currentTab = null;
 
 function migrate(st){
-  st.bahan.forEach(b => { if(!['Kopi','Kue','Umum'].includes(b.kategori)) b.kategori = 'Umum'; });
+  st.bahan.forEach(b => { if(!b.kategori) b.kategori = 'Kopi'; });
   st.produk.forEach(p => {
     if(p.hasil == null){ p.hasil = p.porsi || 1; p.potong = 1; }
     if(p.potong == null) p.potong = 1;
@@ -749,7 +750,7 @@ async function flush(){
     state.bahan.forEach(b => { idsB.add(b.id); const js = JSON.stringify(b); if(saved.bahan.get(b.id) !== js){ upB.push(Object.assign({id:b.id,nama:b.nama||'',harga:num(b.harga),isi:num(b.isi)||1,satuan:b.satuan||'gr',updated_at:now}, katReady ? {kategori:katBahan(b)} : {})); upBjs.push([b.id,js]); } });
     const delB = [...saved.bahan.keys()].filter(id => !idsB.has(id));
     const upM = [], upMjs = [], idsM = new Set();
-    state.produk.forEach(p => { idsM.add(p.id); const js = JSON.stringify(p); if(saved.menu.get(p.id) !== js){ upM.push({id:p.id,nama:p.nama||'',kategori:p.kategori,data:JSON.parse(js),updated_at:now}); upMjs.push([p.id,js]); } });
+    state.produk.forEach(p => { idsM.add(p.id); if(pendingMenu.has(p.id)) return; const js = JSON.stringify(p); if(saved.menu.get(p.id) !== js){ upM.push({id:p.id,nama:p.nama||'',kategori:p.kategori,data:JSON.parse(js),updated_at:now}); upMjs.push([p.id,js]); } });
     const delM = [...saved.menu.keys()].filter(id => !idsM.has(id));
 
     if(upB.length){ const {error} = await sb.from('bahan').upsert(upB); if(error) throw error; upBjs.forEach(([id,js]) => saved.bahan.set(id,js)); }
@@ -763,7 +764,7 @@ async function flush(){
     clearTimeout(saveTimer); saveTimer = setTimeout(flush, 5000);   // coba lagi
   } finally { flushing = false; }
 }
-window.addEventListener('beforeunload', e => { if(dirty || flushing){ e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if(dirty || flushing || pendingMenu.size){ e.preventDefault(); e.returnValue = ''; } });
 
 async function loadOwner(silent){
   if(!silent) setSync('loading');
@@ -779,17 +780,41 @@ async function loadOwner(silent){
   hppReady = !hk.error;
   if(hppReady) hppSynced = new Map(hk.data.map(r => [r.kunci, JSON.stringify({kunci:r.kunci, menu_id:r.menu_id, nama:r.nama, kategori:r.kategori, hpp:+r.hpp, harga:+r.harga})]));
   const ns = migrate({
-    bahan: b.data.map(x => ({id:x.id, nama:x.nama, harga:+x.harga, isi:+x.isi, satuan:x.satuan, kategori:x.kategori || 'Umum'})),
+    bahan: b.data.map(x => ({id:x.id, nama:x.nama, harga:+x.harga, isi:+x.isi, satuan:x.satuan, kategori:x.kategori || 'Kopi'})),
     produk: m.data.map(r => Object.assign({}, r.data || {}, {id:r.id, nama:r.nama, kategori:r.kategori})),
   });
-  if(silent && (dirty || flushing)) return;
+  if(silent && (dirty || flushing || pendingMenu.size)) return;
   const same = JSON.stringify(ns) === JSON.stringify(state);
   if(!same){
     state = ns; markSaved();
+    if(katReady && pindahkanBahanUmum()) save();
     if(!state.produk.find(p => p.id === sel)) sel = state.produk[0] ? state.produk[0].id : null;
     renderOwnerAll();
   }
   try { await syncHpp(); if(!silent || !same) setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
+}
+
+// Bahan dari kelompok lama "Umum" dipindah ke Kopi/Kue sesuai resep yang memakainya.
+// Dipakai keduanya: dibuat salinan untuk kue, dan resep kue diarahkan ke salinan itu.
+function pindahkanBahanUmum(){
+  let ubah = false;
+  const pakai = (p, id) => p.items.some(i => i.bahanId === id) || p.varian.some(v => v.items.some(i => i.bahanId === id));
+  [...state.bahan].forEach(b => {
+    if(b.kategori === 'Kopi' || b.kategori === 'Kue') return;
+    const diKopi = state.produk.some(p => p.kategori === 'Kopi' && pakai(p, b.id));
+    const diKue = state.produk.some(p => p.kategori === 'Kue' && pakai(p, b.id));
+    if(diKopi && diKue){
+      const salin = {...b, id: uid(), kategori: 'Kue'};
+      state.bahan.push(salin);
+      state.produk.filter(p => p.kategori === 'Kue').forEach(p => {
+        p.items.forEach(i => { if(i.bahanId === b.id) i.bahanId = salin.id; });
+        p.varian.forEach(v => v.items.forEach(i => { if(i.bahanId === b.id) i.bahanId = salin.id; }));
+      });
+      b.kategori = 'Kopi';
+    } else b.kategori = diKue ? 'Kue' : 'Kopi';
+    ubah = true;
+  });
+  return ubah;
 }
 
 /* ---------- HPP & harga terkini untuk kasir (tabel hpp_terkini) ---------- */
@@ -797,7 +822,9 @@ let hppSynced = new Map(), hppReady = false;
 const r2 = n => Math.round(n*100)/100;
 function hppRows(){
   const rows = [];
-  state.produk.forEach(p => {
+  // Kasir hanya memakai versi menu yang sudah disimpan; draf/perubahan belum disimpan diabaikan
+  const menus = state.produk.map(p => !pendingMenu.has(p.id) ? p : (saved.menu.has(p.id) ? migrate({bahan:[], produk:[JSON.parse(saved.menu.get(p.id))]}).produk[0] : null)).filter(Boolean);
+  menus.forEach(p => {
     const h = hitung(p);
     if(h.varian.length) h.varian.forEach((vr,vx) => rows.push({kunci:p.id+':'+(vr.v.id||vx), menu_id:p.id, nama:(p.nama||'Tanpa nama')+' · '+(vr.v.nama||'Varian '+(vx+1)), kategori:p.kategori, hpp:r2(vr.hpp), harga:num(vr.v.hargaJual)}));
     else rows.push({kunci:p.id, menu_id:p.id, nama:p.nama||'Tanpa nama', kategori:p.kategori, hpp:r2(h.hpp), harga:num(p.hargaJual)});
@@ -993,7 +1020,7 @@ function renderOwnerAll(){ renderBahan(); renderList(); if(currentTab === 'produ
 function contohButton(){ return state.bahan.length || state.produk.length ? '' : `<p style="margin-top:12px"><button class="btn primary" type="button" data-isi-contoh>Isi dengan data contoh</button></p>`; }
 document.addEventListener('click', e => {
   if(!e.target.closest('[data-isi-contoh]')) return;
-  state = migrate(contoh()); sel = state.produk[0].id; save(); renderOwnerAll();
+  pendingMenu.clear(); state = migrate(contoh()); sel = state.produk[0].id; save(); renderOwnerAll();
 });
 
 function renderList(){
@@ -1006,7 +1033,7 @@ function renderList(){
       const h = hitung(p);
       html += `<button type="button" class="pitem" data-sel="${p.id}" aria-current="${p.id===sel}">
         <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':''}"></span><span class="n">${esc(p.nama)||'Tanpa nama'}</span></span>
-        <span class="h num">${hppLabel(h)}</span></button>`;
+        <span class="h num">${pendingMenu.has(p.id) ? `<span class="chip warn" style="padding:1px 7px">${saved.menu.has(p.id) ? 'Diubah' : 'Draf'}</span>` : hppLabel(h)}</span></button>`;
     });
   });
   $('plist').innerHTML = html;
@@ -1015,18 +1042,25 @@ $('plist').addEventListener('click', e => { const b = e.target.closest('[data-se
 document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
   const k = btn.dataset.add;
   const p = {id:uid(),nama:k==='Kopi'?'Menu kopi baru':'Menu kue baru',kategori:k,hasil:1,potong:k==='Kopi'?1:12,margin:55,hargaJual:0,items:[],lain:[],varian:[]};
-  state.produk.push(p); sel = p.id; save(); renderList(); renderEditor();
+  state.produk.push(p); sel = p.id; pendingMenu.add(p.id); renderList(); renderEditor();
   const n = $('pNama'); if(n){ n.focus(); n.select(); }
 }));
 
-// Pilihan bahan dikelompokkan; kelompok menu itu sendiri tampil paling atas
+// Pilihan bahan: resep kopi hanya bahan kopi, resep kue hanya bahan kue.
+// Tanpa jenis (form belanja): dua kelompok ditampilkan.
 function bahanOptions(selId, list, pref){
   const sorted = [...(list || state.bahan)].sort((a,b)=>(a.nama||'').localeCompare(b.nama||'','id'));
-  const urut = pref === 'Kue' ? ['Kue','Umum','Kopi'] : pref === 'Kopi' ? ['Kopi','Umum','Kue'] : ['Kopi','Kue','Umum'];
-  const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue', Umum:'Bahan umum & kemasan'};
+  const kat = b => b.kategori === 'Kue' ? 'Kue' : 'Kopi';
+  const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue'};
   const opt = b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`;
-  return `<option value="">Pilih bahan…</option>` + urut.map(k => {
-    const xs = sorted.filter(b => (['Kopi','Kue','Umum'].includes(b.kategori) ? b.kategori : 'Umum') === k);
+  if(pref === 'Kopi' || pref === 'Kue'){
+    const milik = sorted.filter(b => kat(b) === pref);
+    const lain = sorted.find(b => b.id === selId && kat(b) !== pref);   // bahan lama dari kelompok lain tetap terlihat
+    return `<option value="">${milik.length ? 'Pilih bahan ' + pref.toLowerCase() + '…' : 'Belum ada bahan ' + pref.toLowerCase() + ' — tambah di tab Bahan Baku'}</option>` + milik.map(opt).join('') +
+      (lain ? `<optgroup label="Kelompok ${kat(lain)} (sebaiknya diganti)">${opt(lain)}</optgroup>` : '');
+  }
+  return `<option value="">Pilih bahan…</option>` + ['Kopi','Kue'].map(k => {
+    const xs = sorted.filter(b => kat(b) === k);
     return xs.length ? `<optgroup label="${label[k]}">${xs.map(opt).join('')}</optgroup>` : '';
   }).join('');
 }
@@ -1093,6 +1127,13 @@ function renderEditor(){
   el.innerHTML = `
   <div class="editor">
     <div class="panel card">
+      <div class="menu-actions">
+        <span id="menuStatus"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" type="button" id="batalMenu" hidden>Batal</button>
+          <button class="btn primary" type="button" id="simpanMenu">Simpan menu</button>
+        </div>
+      </div>
       <div class="row3">
         <label class="field"><span>Nama menu</span><input type="text" id="pNama" data-p="nama" value="${esc(p.nama)}"></label>
         <label class="field"><span>Kategori</span><select id="pKat" data-p="kategori"><option ${!kue?'selected':''}>Kopi</option><option ${kue?'selected':''}>Kue</option></select></label>
@@ -1138,7 +1179,7 @@ function renderEditor(){
       </div>
 
       <div class="sub" style="border-top:1px solid var(--line);padding-top:12px">
-        <span class="note">Perubahan disimpan otomatis.</span>
+        <span class="note">Setelah selesai mengubah, klik <b>Simpan menu</b> di atas. Perubahan yang belum disimpan hilang kalau halaman di-refresh.</span>
         <button class="btn ghost" type="button" id="delProduk">Hapus menu ini</button>
       </div>
     </div>
@@ -1146,6 +1187,7 @@ function renderEditor(){
     <div class="panel card result" id="result"></div>
   </div>`;
   updateComputed();
+  statusMenu();
 }
 
 function updateComputed(){
@@ -1198,11 +1240,11 @@ function updateComputed(){
 const editorEl = $('editor');
 editorEl.addEventListener('input', e => {
   const t = e.target, p = state.produk.find(x => x.id === sel); if(!p) return;
-  if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); save(); if(k==='kategori'){ renderList(); renderEditor(); return; } }
-  else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; save(); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
-  else if(t.dataset.vf){ const v = p.varian[+t.dataset.v]; v[t.dataset.vf] = t.dataset.vf==='nama' ? t.value : num(t.value); save(); }
-  else if(t.dataset.item!=null){ const i = p.items[+t.dataset.item]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; save(); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
-  else if(t.dataset.lain!=null){ const l = p.lain[+t.dataset.lain]; l[t.dataset.f] = t.dataset.f==='nilai' ? num(t.value) : t.value; save(); }
+  if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ renderList(); renderEditor(); return; } }
+  else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
+  else if(t.dataset.vf){ const v = p.varian[+t.dataset.v]; v[t.dataset.vf] = t.dataset.vf==='nama' ? t.value : num(t.value); tandaiMenu(p); }
+  else if(t.dataset.item!=null){ const i = p.items[+t.dataset.item]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
+  else if(t.dataset.lain!=null){ const l = p.lain[+t.dataset.lain]; l[t.dataset.f] = t.dataset.f==='nilai' ? num(t.value) : t.value; tandaiMenu(p); }
   updateComputed();
 });
 editorEl.addEventListener('click', e => {
@@ -1220,23 +1262,63 @@ editorEl.addEventListener('click', e => {
   else if(t.dataset.addVitem!=null){ const vx=+t.dataset.addVitem; p.varian[vx].items.push({bahanId:'',qty:0,per:'porsi'}); renderEditor(); const s=$(`vi-b-${vx}-${p.varian[vx].items.length-1}`); s&&s.focus(); }
   else if(t.dataset.delVitem!=null){ const [a,b] = t.dataset.delVitem.split('-').map(Number); p.varian[a].items.splice(b,1); renderEditor(); }
   else if(t.dataset.pakaiV!=null){ const vx=+t.dataset.pakaiV; p.varian[vx].hargaJual = hitung(p).varian[vx].saran; renderEditor(); }
+  else if(t.id==='simpanMenu'){ simpanMenu(p); return; }
+  else if(t.id==='batalMenu'){ batalMenu(p); return; }
   else if(t.id==='delProduk'){
-    if(!confirm(`Hapus menu “${p.nama}”? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const baru = !saved.menu.has(p.id);
+    if(!confirm(baru ? `Buang menu baru “${p.nama}” yang belum disimpan?` : `Hapus menu “${p.nama}”? Tindakan ini tidak bisa dibatalkan.`)) return;
+    pendingMenu.delete(p.id);
     state.produk = state.produk.filter(x=>x.id!==p.id); sel = state.produk[0]?state.produk[0].id:null; renderList(); renderEditor(); renderSummary();
+    if(!baru) save();
+    return;
   }
   else changed = false;
-  if(changed) save();
+  if(changed) tandaiMenu(p);
 });
 
+/* ---------- Simpan menu secara manual ---------- */
+// Menu baru & perubahan menu hanya tersimpan setelah klik "Simpan menu".
+const pendingMenu = new Set();
+function tandaiMenu(p){
+  if(!p) return;
+  if(saved.menu.get(p.id) === JSON.stringify(p)) pendingMenu.delete(p.id); else pendingMenu.add(p.id);
+  statusMenu(); renderList();
+}
+function statusMenu(){
+  const p = state.produk.find(x => x.id === sel), el = $('menuStatus'); if(!p || !el) return;
+  const baru = !saved.menu.has(p.id), ada = pendingMenu.has(p.id);
+  el.innerHTML = ada ? `<span class="chip warn">${baru ? 'Menu baru · belum disimpan' : 'Ada perubahan · belum disimpan'}</span>` : `<span class="chip good">✓ Tersimpan</span>`;
+  $('simpanMenu').disabled = !ada; $('batalMenu').hidden = !ada;
+}
+function simpanMenu(p){
+  if(!(p.nama || '').trim()){ alert('Isi nama menu dulu.'); const n = $('pNama'); n && n.focus(); return; }
+  const adaBahan = p.items.some(i => i.bahanId && num(i.qty) > 0);
+  if(!adaBahan && !confirm('Menu ini belum punya bahan dengan takaran. Tetap simpan?')) return;
+  p.items = p.items.filter(i => i.bahanId);                       // buang baris bahan yang belum dipilih
+  p.lain = p.lain.filter(l => (l.nama || '').trim() || num(l.nilai));
+  p.varian.forEach(v => { v.items = v.items.filter(i => i.bahanId); });
+  pendingMenu.delete(p.id);
+  save(); renderEditor(); renderList(); renderSummary();
+  toast(`✓ Menu “${p.nama}” tersimpan`, 'ok');
+}
+function batalMenu(p){
+  const lama = saved.menu.get(p.id);
+  if(!confirm(lama ? 'Batalkan perubahan dan kembalikan menu seperti terakhir disimpan?' : 'Buang menu baru ini?')) return;
+  pendingMenu.delete(p.id);
+  if(lama){ const i = state.produk.findIndex(x => x.id === p.id); state.produk[i] = migrate({bahan:[], produk:[JSON.parse(lama)]}).produk[0]; }
+  else { state.produk = state.produk.filter(x => x.id !== p.id); sel = state.produk[0] ? state.produk[0].id : null; }
+  renderEditor(); renderList(); renderSummary();
+}
+
 /* ---------- Bahan baku ---------- */
-const KAT_BAHAN = [['Kopi','☕ Bahan kopi','dot'],['Kue','🍰 Bahan kue','dot kue'],['Umum','Bahan umum & kemasan','dot umum']];
-const katBahan = b => (b && ['Kopi','Kue','Umum'].includes(b.kategori)) ? b.kategori : 'Umum';
+const KAT_BAHAN = [['Kopi','☕ Bahan kopi','dot'],['Kue','🍰 Bahan kue','dot kue']];
+const katBahan = b => (b && b.kategori === 'Kue') ? 'Kue' : 'Kopi';
 function renderBahan(){
   const body = $('bahanBody');
   if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. Klik “+ Tambah” di salah satu kelompok.${contohButton()}</td></tr>`; }
   const baris = b => `<tr>
     <td><input type="text" id="b-n-${b.id}" data-b="${b.id}" data-f="nama" value="${esc(b.nama)}" placeholder="mis. Susu UHT"></td>
-    <td><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue','Umum'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
+    <td><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
     <td><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${fmtU(b.harga)}"></td>
     <td><input type="number" min="0" step="any" id="b-i-${b.id}" data-b="${b.id}" data-f="isi" value="${b.isi}"></td>
     <td><select id="b-s-${b.id}" data-b="${b.id}" data-f="satuan">${['gr','ml','pcs'].map(s=>`<option ${s===b.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
@@ -1274,7 +1356,7 @@ $('bahanBody').addEventListener('click', e => {
   save(); renderBahan(); renderSummary(); renderList();
 });
 function tambahBahan(kategori){
-  const b = {id:uid(),nama:'',harga:0,isi:1000,satuan:'gr',kategori:kategori||'Umum'};
+  const b = {id:uid(),nama:'',harga:0,isi:1000,satuan:'gr',kategori:kategori||'Kopi'};
   state.bahan.push(b); save(); renderBahan();
   const n = $('b-n-'+b.id); if(n){ n.focus(); n.scrollIntoView({block:'center'}); }
 }
