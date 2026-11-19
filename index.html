@@ -733,6 +733,20 @@ let state = {bahan:[], produk:[]};     // data pemilik
 let staff = {bahan:[], menu:[]};       // data karyawan (versi umum)
 let sel = null, rsel = null, currentTab = null;
 
+// Menu kopi selalu dihitung per 1 cup. Resep lama "1 resep = N cup" diubah:
+// takaran per resep dibagi N, biaya lain dibagi N, lalu hasil = 1.
+const bulat2 = n => Math.round(n * 1000) / 1000;
+function jadikanPerCup(p){
+  if(p.kategori !== 'Kopi') return;
+  const n = Math.max(num(p.hasil), 1) * Math.max(num(p.potong), 1);
+  if(n > 1){
+    p.items.forEach(i => { if(i.per !== 'porsi') i.qty = bulat2(num(i.qty) / n); });
+    p.lain.forEach(l => { l.nilai = Math.round(num(l.nilai) / n); });
+  }
+  p.items.forEach(i => { i.per = 'resep'; });
+  p.hasil = 1; p.potong = 1;
+}
+
 function migrate(st){
   st.bahan.forEach(b => { if(!b.kategori) b.kategori = 'Kopi'; });
   st.produk.forEach(p => {
@@ -743,6 +757,7 @@ function migrate(st){
     if(!Array.isArray(p.varian)) p.varian = [];
     if(!Array.isArray(p.tetapOff)) p.tetapOff = [];
     p.items.forEach(i => { if(!i.per) i.per = 'resep'; });
+    jadikanPerCup(p);
     if(p.margin == null) p.margin = 55;
     if(p.hargaJual == null) p.hargaJual = 0;
   });
@@ -965,7 +980,7 @@ const bulat = (n, step=500) => Math.ceil(n/step)*step;
 const unitOf = p => p.kategori === 'Kopi' ? 'cup' : (num(p.potong) > 1 ? 'potong' : 'pcs');
 
 function hitung(p){
-  const hasil = Math.max(num(p.hasil),1);
+  const hasil = p.kategori === 'Kopi' ? 1 : Math.max(num(p.hasil),1);
   const potong = p.kategori === 'Kopi' ? 1 : Math.max(num(p.potong),1);
   const porsi = hasil*potong;
   const baris = p.items.map(i => { const b = bahanById(i.bahanId); return {b, biaya: hargaSatuan(b)*num(i.qty)*(i.per==='porsi'?porsi:1)}; });
@@ -1231,7 +1246,7 @@ function renderEditor(){
   const p = state.produk.find(x => x.id === sel);
   if(!p){ el.innerHTML = `<div class="panel empty">Belum ada menu. Tambahkan menu kopi atau kue dari daftar di kiri.${contohButton()}</div>`; return; }
   const kue = p.kategori === 'Kue';
-  const resepKata = kue ? 'adonan' : 'resep';
+  const resepKata = kue ? 'adonan' : 'cup';
   const yieldBox = kue ? `
       <div class="yield">
         <h3>Hasil dari 1 adonan</h3>
@@ -1257,25 +1272,26 @@ function renderEditor(){
       <div class="row3">
         <label class="field"><span>Nama menu</span><input type="text" id="pNama" data-p="nama" value="${esc(p.nama)}"></label>
         <label class="field"><span>Kategori</span><select id="pKat" data-p="kategori"><option ${!kue?'selected':''}>Kopi</option><option ${kue?'selected':''}>Kue</option></select></label>
-        ${kue ? '' : `<label class="field"><span>1 resep jadi berapa cup?</span><input type="number" min="1" step="1" id="pHasil" data-p="hasil" value="${p.hasil}"></label>`}
       </div>
       ${yieldBox}
 
       <div>
         <div class="sub" style="margin-bottom:6px"><h3>Bahan untuk 1 ${resepKata}</h3><button class="btn" type="button" id="addItem">+ Bahan</button></div>
         <div class="tbl-wrap"><table class="items">
-          <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th><th>Dihitung</th><th class="r">Biaya</th><th></th></tr></thead>
+          <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th>${kue ? '<th>Dihitung</th>' : ''}<th class="r">Biaya</th><th></th></tr></thead>
           <tbody>${p.items.length ? p.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
             <td><select id="it-b-${ix}" data-item="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
             <td><input type="number" min="0" step="any" id="it-q-${ix}" data-item="${ix}" data-f="qty" value="${i.qty}"></td>
             <td>${b?esc(b.satuan):''}</td>
-            <td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per ${resepKata}</option><option value="porsi" ${i.per==='porsi'?'selected':''}>per ${kue?'potong/pcs':'cup'}</option></select></td>
+            ${kue ? `<td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per adonan</option><option value="porsi" ${i.per==='porsi'?'selected':''}>per potong/pcs</option></select></td>` : ''}
             <td class="r num" data-cost="${ix}"></td>
             <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-item="${ix}">✕</button></td></tr>`; }).join('')
-            : `<tr><td colspan="6" class="muted" style="padding:14px 6px">Belum ada bahan. Klik “+ Bahan” lalu pilih dari daftar bahan baku.</td></tr>`}
+            : `<tr><td colspan="${kue?6:5}" class="muted" style="padding:14px 6px">Belum ada bahan. Klik “+ Bahan” lalu pilih dari daftar bahan baku.</td></tr>`}
           </tbody>
         </table></div>
-        <p class="note" style="margin-top:6px">Tulis takaran untuk seluruh ${resepKata}. Kemasan seperti mika atau plastik pilih “per ${kue?'potong/pcs':'cup'}” dan isi 1. Bahan belum ada? Tambahkan dulu di tab <b>Bahan Baku</b>.</p>
+        <p class="note" style="margin-top:6px">${kue
+          ? 'Tulis takaran untuk seluruh adonan. Kemasan seperti mika atau plastik pilih “per potong/pcs” dan isi 1.'
+          : 'Tulis takaran untuk 1 cup, misalnya espresso 18 gr, susu 150 ml. Cup dan es batu sudah otomatis dari biaya tetap.'} Bahan belum ada? Tambahkan dulu di tab <b>Bahan Baku</b>.</p>
       </div>
 
       <div>
@@ -1329,7 +1345,7 @@ function updateComputed(){
       <div>
         <div class="label">${h.varian.length ? 'HPP adonan dasar per '+unit+' (belum isian)' : 'HPP per '+unit}</div>
         <div class="hpp-big num" style="margin-top:6px">${rp(h.hpp)}</div>
-        <div class="note" style="margin-top:4px">Modal 1 ${kue?'adonan':'resep'} ${rp(h.totalBahan+h.totalLain+h.totalTetap)} ÷ ${kue && h.potong>1 ? `(${h.hasil} loyang × ${h.potong} potong) = ` : ''}${h.porsi} ${unit}</div>
+        ${kue ? `<div class="note" style="margin-top:4px">Modal 1 adonan ${rp(h.totalBahan+h.totalLain+h.totalTetap)} ÷ ${h.potong>1 ? `(${h.hasil} loyang × ${h.potong} potong) = ` : ''}${h.porsi} ${unit}</div>` : ''}
         ${kue && h.potong>1 ? `<div class="kv" style="margin-top:8px"><span>HPP per loyang utuh</span><b class="num">${rp(h.hpp*h.potong)}</b></div><div class="kv"><span>Harga jual per loyang (${h.potong} potong)</span><b class="num">${h.jual>0?rp(h.jual*h.potong):'–'}</b></div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
@@ -1363,7 +1379,7 @@ const editorEl = $('editor');
 editorEl.addEventListener('input', e => {
   const t = e.target, p = state.produk.find(x => x.id === sel); if(!p) return;
   if(t.dataset.tetap!=null){ p.tetapOff = (p.tetapOff||[]).filter(x => x !== t.dataset.tetap); if(!t.checked) p.tetapOff.push(t.dataset.tetap); tandaiMenu(p); }
-  else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ renderList(); renderEditor(); return; } }
+  else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ if(p.kategori==='Kopi') jadikanPerCup(p); renderList(); renderEditor(); return; } }
   else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
   else if(t.dataset.vf){ const v = p.varian[+t.dataset.v]; v[t.dataset.vf] = t.dataset.vf==='nama' ? t.value : num(t.value); tandaiMenu(p); }
   else if(t.dataset.item!=null){ const i = p.items[+t.dataset.item]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
@@ -1527,22 +1543,25 @@ function renderResepList(){
 }
 $('rlist').addEventListener('click', e => { const b = e.target.closest('[data-rsel]'); if(!b) return; rsel = b.dataset.rsel; renderResepList(); renderResep(); });
 function renderResep(){
-  const el = $('resepDetail'), x = staff.menu.find(m => m.id === rsel);
+  const el = $('resepDetail'); let x = staff.menu.find(m => m.id === rsel);
   if(!x){ el.innerHTML = `<div class="panel empty">Belum ada menu dari pemilik.</div>`; return; }
   const bn = id => staff.bahan.find(b => b.id === id);
-  const kue = x.kategori === 'Kue', hasil = num(x.hasil) || 1, potong = kue ? (num(x.potong) || 1) : 1;
+  const kue = x.kategori === 'Kue', potong = kue ? (num(x.potong) || 1) : 1;
+  // Kopi: tampilkan takaran per 1 cup (resep lama "1 resep = N cup" dibagi N)
+  const hasilAsli = num(x.hasil) || 1, hasil = kue ? hasilAsli : 1;
+  if(!kue && hasilAsli > 1) x = {...x, items: (x.items || []).map(i => i.per === 'porsi' ? i : {...i, qty: bulat2(num(i.qty) / hasilAsli)})};
   const unit = kue ? (potong > 1 ? 'potong' : 'pcs') : 'cup';
   const tabel = (items, perResepLabel, perPcsLabel) => items.length ? `<div class="tbl-wrap"><table>
       <thead><tr><th>Bahan</th><th class="r">Takaran</th><th>Satuan</th><th>Keterangan</th></tr></thead>
       <tbody>${items.map(i => { const b = bn(i.bahanId); return `<tr><td>${b ? esc(b.nama) : '<span class="muted">(bahan dihapus)</span>'}</td><td class="r num">${num(i.qty).toLocaleString('id-ID')}</td><td>${b ? esc(b.satuan) : ''}</td><td class="muted">${i.per === 'porsi' ? perPcsLabel : perResepLabel}</td></tr>`; }).join('')}</tbody>
     </table></div>` : `<p class="note">Belum ada bahan.</p>`;
-  const hasilTeks = kue ? (potong > 1 ? `1 adonan = ${hasil} loyang × ${potong} potong = <b>${hasil*potong} potong</b>` : `1 adonan = <b>${hasil} pcs</b>`) : `1 resep = <b>${hasil} cup</b>`;
+  const hasilTeks = kue ? (potong > 1 ? `1 adonan = ${hasil} loyang × ${potong} potong = <b>${hasil*potong} potong</b>` : `1 adonan = <b>${hasil} pcs</b>`) : `Takaran untuk <b>1 cup</b>`;
   const hargaUtama = x.varian.length ? '' : `<div class="kv"><span>Harga jual per ${unit}</span><b class="big-price num">${num(x.harga_jual) > 0 ? rp(x.harga_jual) : '–'}</b></div>`;
   el.innerHTML = `<div class="panel card">
     <div class="sub"><h2>${esc(x.nama)}</h2><span class="chip neutral">${x.kategori}</span></div>
     <p class="note" style="font-size:13px;color:var(--fg)">${hasilTeks}</p>
     ${hargaUtama}
-    <div><h3 style="margin-bottom:6px">Bahan untuk 1 ${kue ? 'adonan' : 'resep'}</h3>${tabel(x.items, 'untuk 1 ' + (kue ? 'adonan' : 'resep'), 'per ' + unit)}</div>
+    <div><h3 style="margin-bottom:6px">Bahan untuk 1 ${kue ? 'adonan' : 'cup'}</h3>${tabel(x.items, 'untuk 1 ' + (kue ? 'adonan' : 'cup'), 'per ' + unit)}</div>
     ${x.varian.length ? `<div class="var-wrap"><h3>Varian</h3>${x.varian.map((v,vx) => `<div class="var-card">
       <div class="sub"><b>${esc(v.nama) || 'Varian ' + (vx+1)} <span class="muted" style="font-weight:400">· ${num(v.jumlah)} pcs</span></b><b class="num">${num(v.hargaJual) > 0 ? rp(v.hargaJual) + ' / pcs' : '–'}</b></div>
       ${tabel((v.items || []).map(i => ({...i, per: i.per === 'resep' ? 'resep' : 'porsi'})), 'total untuk varian ini', 'per pcs')}
