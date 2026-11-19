@@ -69,7 +69,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 input[type=text],input[type=number],input[type=email],input[type=password],input[type=date],select{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0}
-input[type=number]{font-variant-numeric:tabular-nums;text-align:right}
+input[type=number],input.uang{font-variant-numeric:tabular-nums;text-align:right}
 input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field>span{font-size:12px;color:var(--muted);font-weight:500}
@@ -103,6 +103,7 @@ input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 .pitem .h{font-size:12px;color:var(--muted);white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--accent);display:inline-block}
 .dot.kue{background:var(--kue)}
+.dot.umum{background:var(--muted)}
 .addrow{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 
 .editor{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
@@ -159,9 +160,13 @@ tbody tr:last-child td{border-bottom:0}
 
 /* Bahan */
 .bahan td:nth-child(1){min-width:180px}
-.bahan td:nth-child(2),.bahan td:nth-child(3){width:130px;min-width:100px}
-.bahan td:nth-child(4){width:90px;min-width:80px}
-.bahan td:nth-child(5){width:140px;white-space:nowrap}
+.bahan td:nth-child(2){width:100px;min-width:90px}
+.bahan td:nth-child(3),.bahan td:nth-child(4){width:130px;min-width:100px}
+.bahan td:nth-child(5){width:90px;min-width:80px}
+.bahan td:nth-child(6){width:140px;white-space:nowrap}
+.bahan tr.grp td{background:var(--surface-2);padding:8px 10px;border-bottom:0}
+.bahan tr.grp + tr td{border-top:0}
+.bahan tbody tr.grp:not(:first-child) td{border-top:12px solid var(--surface)}
 
 /* Belanja & tim */
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
@@ -356,13 +361,12 @@ details.card>summary{cursor:pointer;list-style-position:inside}
         <div class="sub">
           <div>
             <h2>Bahan baku & kemasan</h2>
-            <p class="note">Tulis harga beli dan isi kemasan persis seperti di nota. Harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
+            <p class="note">Bahan dipisah per kelompok: <b>Kopi</b>, <b>Kue</b>, dan <b>Umum</b> (dipakai keduanya, misalnya gula, susu, kemasan). Pindahkan kelompok lewat kolom “Kelompok”. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
           </div>
-          <button class="btn primary" type="button" id="addBahan">+ Tambah bahan</button>
         </div>
         <div class="tbl-wrap">
           <table class="bahan">
-            <thead><tr><th>Nama bahan</th><th class="r">Harga beli (Rp)</th><th class="r">Isi kemasan</th><th>Satuan</th><th class="r">Harga / satuan</th><th></th></tr></thead>
+            <thead><tr><th>Nama bahan</th><th>Kelompok</th><th class="r">Harga beli (Rp)</th><th class="r">Isi kemasan</th><th>Satuan</th><th class="r">Harga / satuan</th><th></th></tr></thead>
             <tbody id="bahanBody"></tbody>
           </table>
         </div>
@@ -410,7 +414,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
             <details id="kExtra" class="extra"><summary>+ Diskon / catatan</summary>
             <div class="field"><span>Diskon</span>
               <div style="display:flex;gap:6px">
-                <input type="number" min="0" step="any" id="kDiskon" inputmode="numeric" placeholder="0" style="flex:1">
+                <input type="text" inputmode="numeric" class="uang" autocomplete="off" id="kDiskon" placeholder="0" style="flex:1">
                 <div class="seg" id="kDiskonMode" style="width:110px"><button type="button" data-dm="rp" aria-selected="true">Rp</button><button type="button" data-dm="pct" aria-selected="false">%</button></div>
               </div>
             </div>
@@ -430,7 +434,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
               </div>
             </div>
             <div id="kTunaiBox" style="display:flex;flex-direction:column;gap:6px">
-              <label class="field"><span>Uang diterima (Rp)</span><input type="number" min="0" step="500" id="kBayar" inputmode="numeric" placeholder="opsional"></label>
+              <label class="field"><span>Uang diterima (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="kBayar" placeholder="opsional"></label>
               <div class="kv" id="kKembaliRow" hidden><span>Kembalian</span><b class="num" id="kKembali"></b></div>
             </div>
             <button class="btn primary" type="button" id="kSimpan" style="padding:12px;font-size:15px">Simpan transaksi</button>
@@ -521,7 +525,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
               <select id="byKategori"><option>Sewa</option><option>Gaji</option><option>Listrik & Air</option><option>Gas</option><option>Internet & Pulsa</option><option>Perawatan</option><option>Promosi</option><option>Lainnya</option></select>
             </label>
             <label class="field"><span>Keterangan</span><input type="text" id="byKet" placeholder="mis. Sewa ruko November"></label>
-            <label class="field"><span>Jumlah (Rp)</span><input type="number" min="0" step="any" id="byNilai" inputmode="numeric"></label>
+            <label class="field"><span>Jumlah (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="byNilai"></label>
             <button class="btn primary" type="submit" id="bySubmit">Simpan biaya</button>
           </div>
           <p class="msg" id="byMsg" hidden></p>
@@ -553,7 +557,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
           <div class="form-grid">
             <label class="field"><span>Tanggal</span><input type="date" id="bjTanggal" required></label>
             <label class="field" style="grid-column:span 2"><span>Bahan</span><select id="bjBahan" required></select></label>
-            <label class="field"><span>Harga total (Rp)</span><input type="number" min="0" step="any" id="bjHarga" inputmode="decimal" required></label>
+            <label class="field"><span>Harga total (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="bjHarga" required></label>
             <label class="field"><span>Isi kemasan (<b id="bjSatuan">–</b>)</span><input type="number" min="0" step="any" id="bjIsi" inputmode="decimal" required></label>
             <label class="field" style="grid-column:1/-1"><span>Catatan (opsional)</span><input type="text" id="bjCatatan" placeholder="mis. beli di Toko Sumber Rejeki"></label>
           </div>
@@ -624,7 +628,27 @@ const rp2 = n => 'Rp ' + (n||0).toLocaleString('id-ID',{maximumFractionDigits:2}
 const pct = n => (isFinite(n) ? (n*100).toLocaleString('id-ID',{maximumFractionDigits:1}) : '–') + '%';
 const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+// Angka: terima juga format uang Indonesia "1.250.000" dari kolom isian uang
+const num = v => {
+  if(typeof v === 'string'){ const s = v.trim(); if(/^\d{1,3}(\.\d{3})+$/.test(s)) v = s.replace(/\./g, ''); }
+  const n = parseFloat(v); return isFinite(n) ? n : 0;
+};
+// Tampilan nilai awal kolom uang: 250000 -> "250.000", 0 -> kosong
+const fmtU = v => { const n = Math.round(num(v)); return n ? n.toLocaleString('id-ID') : ''; };
+// Saat mengetik di kolom uang, titik ribuan dipasang otomatis (posisi kursor dijaga)
+document.addEventListener('input', e => {
+  const t = e.target;
+  if(!t.classList || !t.classList.contains('uang')) return;
+  const pos0 = t.selectionStart == null ? t.value.length : t.selectionStart;
+  const digitsBefore = t.value.slice(0, pos0).replace(/\D/g, '').length;
+  const d = t.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 13);
+  const f = d ? Number(d).toLocaleString('id-ID') : '';
+  if(f === t.value) return;
+  t.value = f;
+  let pos = 0, c = 0;
+  while(pos < f.length && c < digitsBefore){ if(/\d/.test(f[pos])) c++; pos++; }
+  try { t.setSelectionRange(pos, pos); } catch(err){}
+}, true);
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const tgl = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) : '';
 function msg(el, type, text){ el.className = 'msg ' + type; el.textContent = text; el.hidden = !text; }
@@ -654,6 +678,7 @@ function contoh(){
     keju:b('Keju cheddar',75000,1000,'gr'), pisang:b('Pisang raja',20000,1000,'gr'), sosis:b('Sosis sapi',45000,20,'pcs'),
   };
   const it = (bh,qty,per='resep') => ({bahanId:bh.id,qty,per});
+  Object.entries(B).forEach(([k, x]) => { x.kategori = ['kopi','aren','es','cup','sedotan'].includes(k) ? 'Kopi' : ['susu','gula'].includes(k) ? 'Umum' : 'Kue'; });
   return { bahan:Object.values(B), produk:[
     {id:uid(),nama:'Es Kopi Susu Gula Aren',kategori:'Kopi',hasil:1,potong:1,margin:55,hargaJual:22000,
       items:[it(B.kopi,18),it(B.susu,150),it(B.aren,25),it(B.es,150),it(B.cup,1),it(B.sedotan,1)],
@@ -683,6 +708,7 @@ let staff = {bahan:[], menu:[]};       // data karyawan (versi umum)
 let sel = null, rsel = null, currentTab = null;
 
 function migrate(st){
+  st.bahan.forEach(b => { if(!['Kopi','Kue','Umum'].includes(b.kategori)) b.kategori = 'Umum'; });
   st.produk.forEach(p => {
     if(p.hasil == null){ p.hasil = p.porsi || 1; p.potong = 1; }
     if(p.potong == null) p.potong = 1;
@@ -697,7 +723,7 @@ function migrate(st){
 }
 
 /* ---------- Simpan ke Supabase (pemilik) ---------- */
-let saved = {bahan:new Map(), menu:new Map()}, saveTimer = null, flushing = false, dirty = false;
+let saved = {bahan:new Map(), menu:new Map()}, saveTimer = null, flushing = false, dirty = false, katReady = true;
 const SYNC = { loading:['','Memuat…'], saving:['','Menyimpan…'], synced:['good','✓ Tersimpan'], error:['warn','Gagal menyimpan'] };
 function setSync(s, detail){
   const el = $('syncStatus'); el.hidden = false;
@@ -720,7 +746,7 @@ async function flush(){
   try {
     const now = new Date().toISOString();
     const upB = [], upBjs = [], idsB = new Set();
-    state.bahan.forEach(b => { idsB.add(b.id); const js = JSON.stringify(b); if(saved.bahan.get(b.id) !== js){ upB.push({id:b.id,nama:b.nama||'',harga:num(b.harga),isi:num(b.isi)||1,satuan:b.satuan||'gr',updated_at:now}); upBjs.push([b.id,js]); } });
+    state.bahan.forEach(b => { idsB.add(b.id); const js = JSON.stringify(b); if(saved.bahan.get(b.id) !== js){ upB.push(Object.assign({id:b.id,nama:b.nama||'',harga:num(b.harga),isi:num(b.isi)||1,satuan:b.satuan||'gr',updated_at:now}, katReady ? {kategori:katBahan(b)} : {})); upBjs.push([b.id,js]); } });
     const delB = [...saved.bahan.keys()].filter(id => !idsB.has(id));
     const upM = [], upMjs = [], idsM = new Set();
     state.produk.forEach(p => { idsM.add(p.id); const js = JSON.stringify(p); if(saved.menu.get(p.id) !== js){ upM.push({id:p.id,nama:p.nama||'',kategori:p.kategori,data:JSON.parse(js),updated_at:now}); upMjs.push([p.id,js]); } });
@@ -741,16 +767,19 @@ window.addEventListener('beforeunload', e => { if(dirty || flushing){ e.preventD
 
 async function loadOwner(silent){
   if(!silent) setSync('loading');
-  const [b, m, hk] = await Promise.all([
-    sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at'),
+  let [b, m, hk] = await Promise.all([
+    sb.from('bahan').select('id,nama,harga,isi,satuan,kategori').order('created_at'),
     sb.from('menu').select('id,nama,kategori,data').order('created_at'),
     sb.from('hpp_terkini').select('kunci,menu_id,nama,kategori,hpp,harga'),
   ]);
+  // bahan-kategori.sql belum dijalankan: muat tanpa kolom kategori
+  katReady = !(b.error && /kategori/i.test(b.error.message || ''));
+  if(!katReady) b = await sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at');
   if(b.error || m.error){ setSync('error', terjemah(b.error || m.error)); return; }
   hppReady = !hk.error;
   if(hppReady) hppSynced = new Map(hk.data.map(r => [r.kunci, JSON.stringify({kunci:r.kunci, menu_id:r.menu_id, nama:r.nama, kategori:r.kategori, hpp:+r.hpp, harga:+r.harga})]));
   const ns = migrate({
-    bahan: b.data.map(x => ({id:x.id, nama:x.nama, harga:+x.harga, isi:+x.isi, satuan:x.satuan})),
+    bahan: b.data.map(x => ({id:x.id, nama:x.nama, harga:+x.harga, isi:+x.isi, satuan:x.satuan, kategori:x.kategori || 'Umum'})),
     produk: m.data.map(r => Object.assign({}, r.data || {}, {id:r.id, nama:r.nama, kategori:r.kategori})),
   });
   if(silent && (dirty || flushing)) return;
@@ -990,9 +1019,16 @@ document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('cli
   const n = $('pNama'); if(n){ n.focus(); n.select(); }
 }));
 
-function bahanOptions(selId, list){
+// Pilihan bahan dikelompokkan; kelompok menu itu sendiri tampil paling atas
+function bahanOptions(selId, list, pref){
   const sorted = [...(list || state.bahan)].sort((a,b)=>(a.nama||'').localeCompare(b.nama||'','id'));
-  return `<option value="">Pilih bahan…</option>` + sorted.map(b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`).join('');
+  const urut = pref === 'Kue' ? ['Kue','Umum','Kopi'] : pref === 'Kopi' ? ['Kopi','Umum','Kue'] : ['Kopi','Kue','Umum'];
+  const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue', Umum:'Bahan umum & kemasan'};
+  const opt = b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`;
+  return `<option value="">Pilih bahan…</option>` + urut.map(k => {
+    const xs = sorted.filter(b => (['Kopi','Kue','Umum'].includes(b.kategori) ? b.kategori : 'Umum') === k);
+    return xs.length ? `<optgroup label="${label[k]}">${xs.map(opt).join('')}</optgroup>` : '';
+  }).join('');
 }
 function varianSection(p){
   const vs = p.varian;
@@ -1006,12 +1042,12 @@ function varianSection(p){
       <div class="var-head">
         <label class="field"><span>Nama varian</span><input type="text" id="v-n-${vx}" data-v="${vx}" data-vf="nama" value="${esc(v.nama)}" placeholder="mis. Coklat"></label>
         <label class="field"><span>Jumlah (pcs)</span><input type="number" min="1" step="1" id="v-j-${vx}" data-v="${vx}" data-vf="jumlah" value="${v.jumlah}"></label>
-        <label class="field"><span>Harga jual / pcs (Rp)</span><input type="number" min="0" step="500" id="v-h-${vx}" data-v="${vx}" data-vf="hargaJual" value="${v.hargaJual}"></label>
+        <label class="field"><span>Harga jual / pcs (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="v-h-${vx}" data-v="${vx}" data-vf="hargaJual" value="${fmtU(v.hargaJual)}"></label>
         <button class="btn ghost" type="button" title="Hapus varian" aria-label="Hapus varian" data-del-var="${vx}">✕</button>
       </div>
       <div class="tbl-wrap"><table class="items"><tbody>
         ${v.items.length ? v.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
-          <td><select id="vi-b-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="bahanId">${bahanOptions(i.bahanId)}</select></td>
+          <td><select id="vi-b-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
           <td><input type="number" min="0" step="any" id="vi-q-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="qty" value="${i.qty}"></td>
           <td>${b?esc(b.satuan):''}</td>
           <td><select id="vi-p-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="per"><option value="porsi" ${i.per!=='resep'?'selected':''}>per pcs</option><option value="resep" ${i.per==='resep'?'selected':''}>total varian</option></select></td>
@@ -1069,7 +1105,7 @@ function renderEditor(){
         <div class="tbl-wrap"><table class="items">
           <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th><th>Dihitung</th><th class="r">Biaya</th><th></th></tr></thead>
           <tbody>${p.items.length ? p.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
-            <td><select id="it-b-${ix}" data-item="${ix}" data-f="bahanId">${bahanOptions(i.bahanId)}</select></td>
+            <td><select id="it-b-${ix}" data-item="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
             <td><input type="number" min="0" step="any" id="it-q-${ix}" data-item="${ix}" data-f="qty" value="${i.qty}"></td>
             <td>${b?esc(b.satuan):''}</td>
             <td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per ${resepKata}</option><option value="porsi" ${i.per==='porsi'?'selected':''}>per ${kue?'potong/pcs':'cup'}</option></select></td>
@@ -1087,7 +1123,7 @@ function renderEditor(){
         <div class="tbl-wrap"><table class="items">
           <tbody>${p.lain.length ? p.lain.map((l,ix) => `<tr>
             <td><input type="text" id="ln-n-${ix}" data-lain="${ix}" data-f="nama" value="${esc(l.nama)}" placeholder="Nama biaya"></td>
-            <td style="width:140px"><input type="number" min="0" step="any" id="ln-v-${ix}" data-lain="${ix}" data-f="nilai" value="${l.nilai}"></td>
+            <td style="width:140px"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="ln-v-${ix}" data-lain="${ix}" data-f="nilai" value="${fmtU(l.nilai)}"></td>
             <td style="width:36px"><button class="btn ghost" type="button" title="Hapus biaya" aria-label="Hapus biaya" data-del-lain="${ix}">✕</button></td></tr>`).join('')
             : `<tr><td class="muted" style="padding:14px 6px">Tidak ada biaya lain.</td></tr>`}
           </tbody>
@@ -1098,7 +1134,7 @@ function renderEditor(){
 
       <div class="row3" style="grid-template-columns:1fr 1fr">
         <label class="field"><span>Target margin laba (%)</span><input type="number" min="0" max="95" step="1" id="pMargin" data-p="margin" value="${p.margin}"></label>
-        ${kue && p.varian.length ? '' : `<label class="field"><span>Harga jual per <b id="unitJual">${unitOf(p)}</b> (Rp)</span><input type="number" min="0" step="500" id="pJual" data-p="hargaJual" value="${p.hargaJual}"></label>`}
+        ${kue && p.varian.length ? '' : `<label class="field"><span>Harga jual per <b id="unitJual">${unitOf(p)}</b> (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="pJual" data-p="hargaJual" value="${fmtU(p.hargaJual)}"></label>`}
       </div>
 
       <div class="sub" style="border-top:1px solid var(--line);padding-top:12px">
@@ -1193,17 +1229,32 @@ editorEl.addEventListener('click', e => {
 });
 
 /* ---------- Bahan baku ---------- */
+const KAT_BAHAN = [['Kopi','☕ Bahan kopi','dot'],['Kue','🍰 Bahan kue','dot kue'],['Umum','Bahan umum & kemasan','dot umum']];
+const katBahan = b => (b && ['Kopi','Kue','Umum'].includes(b.kategori)) ? b.kategori : 'Umum';
 function renderBahan(){
   const body = $('bahanBody');
-  if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Belum ada bahan. Klik “+ Tambah bahan”.${contohButton()}</td></tr>`; return; }
-  body.innerHTML = state.bahan.map(b => `<tr>
+  if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. Klik “+ Tambah” di salah satu kelompok.${contohButton()}</td></tr>`; }
+  const baris = b => `<tr>
     <td><input type="text" id="b-n-${b.id}" data-b="${b.id}" data-f="nama" value="${esc(b.nama)}" placeholder="mis. Susu UHT"></td>
-    <td><input type="number" min="0" step="any" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${b.harga}"></td>
+    <td><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue','Umum'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
+    <td><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${fmtU(b.harga)}"></td>
     <td><input type="number" min="0" step="any" id="b-i-${b.id}" data-b="${b.id}" data-f="isi" value="${b.isi}"></td>
     <td><select id="b-s-${b.id}" data-b="${b.id}" data-f="satuan">${['gr','ml','pcs'].map(s=>`<option ${s===b.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
     <td class="r num" data-pu="${b.id}">${rp2(hargaSatuan(b))} / ${esc(b.satuan)}</td>
-    <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-b="${b.id}">✕</button></td></tr>`).join('');
+    <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-b="${b.id}">✕</button></td></tr>`;
+  if(!state.bahan.length) return;
+  const sortNama = (a,b) => (a.nama||'').localeCompare(b.nama||'','id');
+  body.innerHTML = KAT_BAHAN.map(([k, label, dot]) => {
+    const list = state.bahan.filter(b => katBahan(b) === k).sort(sortNama);
+    return `<tr class="grp"><td colspan="7"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b><span class="${dot}" style="margin-right:8px"></span>${label} <span class="muted" style="font-weight:400">(${list.length})</span></b><button class="btn small" type="button" data-add-b="${k}">+ Tambah</button></div></td></tr>` +
+      (list.length ? list.map(baris).join('') : `<tr><td colspan="7" class="note" style="padding:10px 6px">Belum ada bahan di kelompok ini.</td></tr>`);
+  }).join('');
 }
+$('bahanBody').addEventListener('change', e => {
+  const t = e.target, b = bahanById(t.dataset.b); if(!b || t.dataset.f !== 'kategori') return;
+  renderBahan();   // pindahkan baris ke kelompok barunya
+  const n = $('b-n-' + b.id); n && n.scrollIntoView({block:'center'});
+});
 $('bahanBody').addEventListener('input', e => {
   const t = e.target, b = bahanById(t.dataset.b); if(!b) return;
   b[t.dataset.f] = (t.dataset.f==='harga'||t.dataset.f==='isi') ? num(t.value) : t.value;
@@ -1211,6 +1262,8 @@ $('bahanBody').addEventListener('input', e => {
   save(); renderSummary(); renderList();
 });
 $('bahanBody').addEventListener('click', e => {
+  const add = e.target.closest('[data-add-b]');
+  if(add){ tambahBahan(add.dataset.addB); return; }
   const t = e.target.closest('[data-del-b]'); if(!t) return;
   const id = t.dataset.delB, b = bahanById(id);
   const dipakai = state.produk.filter(p => p.items.some(i => i.bahanId===id) || p.varian.some(v => v.items.some(i => i.bahanId===id))).map(p=>p.nama);
@@ -1220,11 +1273,11 @@ $('bahanBody').addEventListener('click', e => {
   state.produk.forEach(p => { p.items = p.items.filter(i=>i.bahanId!==id); p.varian.forEach(v => v.items = v.items.filter(i=>i.bahanId!==id)); });
   save(); renderBahan(); renderSummary(); renderList();
 });
-$('addBahan').addEventListener('click', () => {
-  const b = {id:uid(),nama:'',harga:0,isi:1000,satuan:'gr'};
+function tambahBahan(kategori){
+  const b = {id:uid(),nama:'',harga:0,isi:1000,satuan:'gr',kategori:kategori||'Umum'};
   state.bahan.push(b); save(); renderBahan();
-  const n = $('b-n-'+b.id); n && n.focus();
-});
+  const n = $('b-n-'+b.id); if(n){ n.focus(); n.scrollIntoView({block:'center'}); }
+}
 
 /* ---------- Ringkasan ---------- */
 function renderSummary(){
@@ -1245,7 +1298,7 @@ function renderSummary(){
    ===================================================================== */
 async function loadStaff(){
   const [b, m] = await Promise.all([
-    sb.from('bahan_umum').select('id,nama,satuan').order('nama'),
+    sb.from('bahan_umum').select('*').order('nama'),
     sb.from('menu_umum').select('*').order('nama'),
   ]);
   if(b.error || m.error){ $('resepDetail').innerHTML = `<div class="panel empty">Gagal memuat data: ${esc(terjemah(b.error || m.error))}</div>`; return; }
@@ -1623,7 +1676,7 @@ async function refreshShift(){
   }
   if(!data){
     el.innerHTML = `<div class="shift-line"><div class="info"><b>Kasir belum dibuka</b><span class="note">Hitung uang di laci, isi modal awal, lalu buka.</span></div>
-      <div class="shift-form"><input type="number" min="0" step="500" id="sModal" inputmode="numeric" placeholder="Modal awal (Rp)" aria-label="Modal awal di laci" style="width:160px"><button class="btn primary" type="button" id="sBuka">Buka kasir</button></div></div>`;
+      <div class="shift-form"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="sModal" placeholder="Modal awal (Rp)" aria-label="Modal awal di laci" style="width:160px"><button class="btn primary" type="button" id="sBuka">Buka kasir</button></div></div>`;
     return;
   }
   const harus = +data.modal_awal + +data.tunai;
@@ -1640,7 +1693,7 @@ $('shiftBar').addEventListener('click', async e => {
     if(error){ alert(terjemah(error)); t.disabled = false; } else refreshShift();
   } else if(t.id === 'sTutupMulai'){
     if(myQueue().length){ alert('Masih ada transaksi yang tersimpan di HP dan belum terkirim. Sambungkan internet lalu klik "Kirim sekarang" dulu.'); return; }
-    $('sTutupBox').innerHTML = `<label class="field"><span>Uang fisik di laci sekarang (Rp)</span><input type="number" min="0" step="500" id="sFisik" inputmode="numeric"></label>
+    $('sTutupBox').innerHTML = `<label class="field"><span>Uang fisik di laci sekarang (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="sFisik"></label>
       <label class="field"><span>Catatan (opsional)</span><input type="text" id="sCatatan"></label>
       <button class="btn primary" type="button" id="sTutup">Simpan & tutup</button><button class="btn" type="button" id="sBatalTutup">Batal</button>`;
     $('sFisik').focus();
