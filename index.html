@@ -290,6 +290,13 @@ nav.tabs{flex-wrap:wrap;overflow:visible}
 nav.tabs .lainnya,.more-menu{display:none}
 .pitem[aria-current="true"]{background:var(--surface);border-color:var(--line);box-shadow:inset 3px 0 0 var(--karamel)}
 .pitem .j{display:none}
+/* Bahan: baris sedang diedit */
+table.bahan tr.sedang-edit td{background:var(--accent-soft);border-bottom:0}
+table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px}
+.edit-aksi{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px}
+.edit-aksi .tetap-qty{width:190px}
+.edit-aksi .note{align-self:center}
+#bahanFilter button{padding:7px 14px}
 .pitem.rugi .h{color:var(--bad);font-weight:600}
 .back-hp{display:none}
 /* Kartu hasil HPP berwarna karamel */
@@ -354,8 +361,13 @@ nav.tabs .lainnya,.more-menu{display:none}
   table.bahan tr.brow td:nth-child(7){grid-area:del;justify-self:end;align-self:center}
   table.bahan tr.grp,table.bahan tr:not(.brow){display:block}
   table.bahan tr.grp td,table.bahan tr:not(.brow) td{display:block;width:100%!important;box-sizing:border-box}
-  #tetapBody td:first-child{width:58%}
   table.bahan tbody tr.grp:not(:first-child) td{border-top:0;margin-top:14px}
+  table.bahan tr.sedang-edit{background:var(--accent-soft);padding:12px;border-radius:12px 12px 0 0;border-bottom:0;margin-top:8px}
+  table.bahan tr.sedang-edit td{background:transparent}
+  table.bahan tr.edit-bawah td{border-radius:0 0 12px 12px;padding:0 12px 12px}
+  .edit-aksi .tetap-qty{width:100%}
+  .edit-aksi .btn{padding:10px 14px}
+  #bahanFilter{width:100%}
   .addrow{display:grid;grid-template-columns:1fr 1fr}
   .addrow .btn{padding:12px}
   /* Pilih menu -> layar detail; tombol kembali ke daftar */
@@ -467,29 +479,19 @@ nav.tabs .lainnya,.more-menu{display:none}
     <!-- PEMILIK: Bahan -->
     <section id="tab-bahan" hidden>
       <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="panel card" id="tetapPanel">
-        <div class="sub">
-          <div>
-            <h2>Biaya tetap per cup kopi</h2>
-            <p class="note">Otomatis masuk ke HPP setiap menu kopi, jadi cup dan es batu tidak perlu dicatat sebagai bahan. Kalau ada menu yang tidak memakainya (misalnya kopi panas tanpa es), hilangkan centangnya di menu itu.</p>
-          </div>
-          <b class="big-price num" id="tetapSum"></b>
-        </div>
-        <p class="msg err" id="tetapWarn" hidden>Biaya tetap belum bisa disimpan. Jalankan file biaya-tetap.sql di Supabase.</p>
-        <div class="msg info" id="pindahBox" hidden></div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Nama</th><th class="r">Biaya per cup (Rp)</th><th></th></tr></thead>
-          <tbody id="tetapBody"></tbody>
-        </table></div>
-        <div><button class="btn" type="button" id="tetapTambah">+ Biaya tetap</button></div>
-      </div>
       <div class="panel card">
         <div class="sub">
           <div>
             <h2>Bahan baku</h2>
-            <p class="note">Bahan dipisah: <b>Kopi</b> khusus menu kopi, <b>Kue</b> khusus menu kue. Bahan yang dipakai keduanya (misalnya susu) dibuat di masing-masing kelompok, jadi harganya juga bisa berbeda. Pindahkan kelompok lewat kolom “Kelompok”. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru.</p>
+            <p class="note">Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru. Klik <b>Edit</b> untuk mengubah. Bahan kopi yang dipakai di setiap cup (misalnya cup + tutup, es batu) centang <b>Tetap tiap cup</b>, supaya otomatis masuk ke HPP semua menu kopi.</p>
+          </div>
+          <div class="seg" role="tablist" id="bahanFilter" style="min-width:240px">
+            <button type="button" data-fb="semua" aria-selected="true">Semua</button>
+            <button type="button" data-fb="Kopi" aria-selected="false">Kopi</button>
+            <button type="button" data-fb="Kue" aria-selected="false">Kue</button>
           </div>
         </div>
+        <p class="msg err" id="tetapWarn" hidden>Bahan tetap belum bisa disimpan. Jalankan file biaya-tetap.sql di Supabase.</p>
         <div class="tbl-wrap">
           <table class="bahan">
             <thead><tr><th>Nama bahan</th><th>Kelompok</th><th class="r">Harga beli (Rp)</th><th class="r">Isi kemasan</th><th>Satuan</th><th class="r">Harga / satuan</th><th></th></tr></thead>
@@ -920,7 +922,8 @@ async function loadOwner(silent){
   ]);
   const pg = await sb.from('pengaturan').select('kunci,nilai').eq('kunci', 'biaya_tetap_kopi').maybeSingle();
   tetapReady = !pg.error;
-  if(pg.data && pg.data.nilai && Array.isArray(pg.data.nilai.items)) biayaTetap = pg.data.nilai.items.map(t => ({id: t.id || uid(), nama: t.nama || '', biaya: num(t.biaya)}));
+  if(pg.data && pg.data.nilai && Array.isArray(pg.data.nilai.items)) biayaTetap = pg.data.nilai.items.map(t =>
+    t.bahanId ? {id: t.id || uid(), bahanId: t.bahanId, qty: num(t.qty) || 1} : {id: t.id || uid(), nama: t.nama || '', biaya: num(t.biaya)});
   // bahan-kategori.sql belum dijalankan: muat tanpa kolom kategori
   katReady = !(b.error && /kategori/i.test(b.error.message || ''));
   if(!katReady) b = await sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at');
@@ -936,87 +939,65 @@ async function loadOwner(silent){
   if(!same){
     state = ns; markSaved();
     if(katReady && pindahkanBahanUmum()) save();
+    if(konversiTetapLama()){ save(); simpanTetap(); }
     if(!state.produk.find(p => p.id === sel)) sel = state.produk[0] ? state.produk[0].id : null;
     renderOwnerAll();
   }
   try { await syncHpp(); if(!silent || !same) setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
 }
 
-/* ---------- Biaya tetap per cup kopi ---------- */
+/* ---------- Bahan tetap per cup kopi ----------
+   Bahan kopi yang dicentang "tetap" (mis. cup + tutup, es batu) otomatis masuk ke HPP setiap menu kopi.
+   Disimpan di tabel pengaturan: items = [{id, bahanId, qty}] — qty = takaran per cup.
+   id dipakai menu (p.tetapOff) untuk mematikan bahan tetap tertentu di menu itu. */
+function tetapList(){
+  return biayaTetap.map(t => {
+    const b = t.bahanId ? bahanById(t.bahanId) : null;
+    if(!b || katBahan(b) !== 'Kopi') return null;
+    return {id: t.id, bahanId: b.id, qty: num(t.qty) || 0, nama: b.nama, b, biaya: hargaSatuan(b) * (num(t.qty) || 0)};
+  }).filter(Boolean);
+}
+const tetapDari = bahanId => biayaTetap.find(t => t.bahanId === bahanId);
 function simpanTetap(){
   if(!me || me.role !== 'owner') return;
-  renderTetapInfo();
-  if(!tetapReady){ setSync('error', 'Jalankan biaya-tetap.sql di Supabase supaya biaya tetap tersimpan.'); return; }
+  const w = $('tetapWarn'); if(w) w.hidden = tetapReady;
+  if(!tetapReady){ setSync('error', 'Jalankan biaya-tetap.sql di Supabase supaya bahan tetap tersimpan.'); return; }
   setSync('saving'); clearTimeout(tetapTimer);
   tetapTimer = setTimeout(async () => {
-    const {error} = await sb.from('pengaturan').upsert({kunci:'biaya_tetap_kopi', nilai:{items: biayaTetap}, updated_at: new Date().toISOString()});
+    const items = biayaTetap.filter(t => t.bahanId).map(t => ({id: t.id, bahanId: t.bahanId, qty: num(t.qty)}));
+    const {error} = await sb.from('pengaturan').upsert({kunci:'biaya_tetap_kopi', nilai:{items}, updated_at: new Date().toISOString()});
     if(error){ setSync('error', terjemah(error)); return; }
     try { await syncHpp(); setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
   }, 800);
 }
-function renderTetap(){
-  const el = $('tetapBody'); if(!el) return;
-  el.innerHTML = biayaTetap.length ? biayaTetap.map((t,i) => `<tr>
-      <td><input type="text" id="tt-n-${i}" data-tt="${i}" data-f="nama" value="${esc(t.nama)}" placeholder="mis. Cup + tutup"></td>
-      <td style="width:170px"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="tt-b-${i}" data-tt="${i}" data-f="biaya" value="${fmtU(t.biaya)}"></td>
-      <td style="width:36px"><button class="btn ghost" type="button" title="Hapus" aria-label="Hapus biaya tetap" data-del-tt="${i}">✕</button></td></tr>`).join('')
-    : `<tr><td colspan="3" class="note" style="padding:10px 6px">Belum ada biaya tetap.</td></tr>`;
-  $('tetapWarn').hidden = tetapReady;
-  renderTetapInfo();
-  renderPindahTetap();
-}
-function renderTetapInfo(){ const el = $('tetapSum'); if(el) el.textContent = rp(biayaTetap.reduce((s,t) => s + num(t.biaya), 0)) + ' per cup'; }
-document.addEventListener('input', e => {
-  const t = e.target; if(t.dataset.tt == null || !t.closest('#tetapBody')) return;
-  const x = biayaTetap[+t.dataset.tt]; if(!x) return;
-  x[t.dataset.f] = t.dataset.f === 'biaya' ? num(t.value) : t.value;
-  simpanTetap(); renderList(); renderSummary();
-});
-document.addEventListener('click', e => {
-  if(e.target.closest('#tetapTambah')){ biayaTetap.push({id: uid(), nama: '', biaya: 0}); renderTetap(); simpanTetap(); const n = $('tt-n-' + (biayaTetap.length - 1)); n && n.focus(); return; }
-  const d = e.target.closest('[data-del-tt]');
-  if(d){ const x = biayaTetap[+d.dataset.delTt]; if(!confirm(`Hapus biaya tetap “${x.nama}”? Semua menu kopi ikut berubah HPP-nya.`)) return; biayaTetap.splice(+d.dataset.delTt, 1); renderTetap(); simpanTetap(); renderList(); renderSummary(); return; }
-  if(e.target.closest('#pindahTetap')) pindahkanCupEs();
-});
-
-// Cup & es batu yang dulu dicatat sebagai bahan di resep kopi -> dipindah ke biaya tetap
-const polaCup = /\b(cup|gelas)\b/i, polaEs = /\bes\s*batu\b|\bice\s*cube\b/i;
-function calonTetap(){
-  return state.bahan.filter(b => katBahan(b) === 'Kopi' && (polaCup.test(b.nama || '') || polaEs.test(b.nama || '')));
-}
-function renderPindahTetap(){
-  const el = $('pindahBox'); if(!el) return;
-  const xs = calonTetap();
-  el.hidden = !xs.length;
-  if(xs.length) el.innerHTML = `<div class="sub"><div><b>Cup / es batu masih tercatat sebagai bahan:</b> ${xs.map(b => esc(b.nama)).join(', ')}.<div class="note">Pindahkan ke biaya tetap: biaya per cup dihitung dari harga bahan &amp; takaran di resep, bahannya dihapus dari daftar, dan menu yang tidak memakainya (misalnya kopi panas tanpa es) otomatis tidak dicentang.</div></div><button class="btn primary" type="button" id="pindahTetap">Pindahkan ke biaya tetap</button></div>`;
-}
-function pindahkanCupEs(){
-  const xs = calonTetap(); if(!xs.length) return;
-  if(!confirm(`Pindahkan ${xs.map(b => b.nama).join(', ')} ke biaya tetap per cup? Bahan ini akan dihapus dari daftar bahan dan dari resep kopi.`)) return;
-  const kopi = state.produk.filter(p => p.kategori === 'Kopi');
-  const perCup = (p, i) => { const b = bahanById(i.bahanId); const porsi = Math.max(num(p.hasil), 1); return hargaSatuan(b) * num(i.qty) / (i.per === 'porsi' ? 1 : porsi); };
-  const median = a => { const s = [...a].sort((x,y) => x-y); return s.length ? s[Math.floor(s.length/2)] : 0; };
-  const target = id => biayaTetap.find(t => t.id === id) || (biayaTetap.push({id, nama: id === 'cup' ? 'Cup + tutup' : 'Es batu', biaya: 0}), biayaTetap[biayaTetap.length - 1]);
-  ['cup','es'].forEach(jenis => {
-    const pola = jenis === 'cup' ? polaCup : polaEs;
-    const ids = xs.filter(b => pola.test(b.nama || '') && !(jenis === 'cup' && polaEs.test(b.nama || ''))).map(b => b.id);
-    if(!ids.length) return;
-    const biayaMenu = kopi.map(p => p.items.filter(i => ids.includes(i.bahanId)).reduce((s,i) => s + perCup(p, i), 0)).filter(v => v > 0);
-    const t = target(jenis);
-    if(biayaMenu.length) t.biaya = Math.round(median(biayaMenu));
-    else { const b = bahanById(ids[0]); t.biaya = Math.round(hargaSatuan(b) * (jenis === 'cup' ? 1 : 150)); }
-    kopi.forEach(p => {
-      const pakai = p.items.some(i => ids.includes(i.bahanId));
-      p.tetapOff = (p.tetapOff || []).filter(x => x !== jenis);
-      if(!pakai) p.tetapOff.push(jenis);
-      p.items = p.items.filter(i => !ids.includes(i.bahanId));
-    });
+// Versi lama: biaya tetap ditulis langsung (nama + Rp per cup). Diubah jadi bahan kopi biasa yang dicentang tetap.
+function konversiTetapLama(){
+  let ubah = false;
+  biayaTetap.forEach(t => {
+    if(t.bahanId) return;
+    const nama = (t.nama || '').trim() || 'Biaya tetap';
+    let b = state.bahan.find(x => katBahan(x) === 'Kopi' && (x.nama || '').trim().toLowerCase() === nama.toLowerCase());
+    if(!b){ b = {id: uid(), nama, harga: Math.round(num(t.biaya)), isi: 1, satuan: 'pcs', kategori: 'Kopi'}; state.bahan.push(b); }
+    t.bahanId = b.id; t.qty = b.satuan === 'pcs' && num(b.isi) === 1 ? 1 : (hargaSatuan(b) > 0 ? bulat2(num(t.biaya) / hargaSatuan(b)) : 1);
+    delete t.nama; delete t.biaya; ubah = true;
   });
-  const hapus = new Set(xs.map(b => b.id));
-  state.bahan = state.bahan.filter(b => !hapus.has(b.id));
-  save(); simpanTetap(); renderOwnerAll(); renderTetap();
-  toast('✓ Cup & es batu dipindah ke biaya tetap', 'ok');
+  return ubah;
 }
+// Centang "tetap" pada bahan: takaran per cup diambil dari resep yang sudah memakainya (nilai tengah),
+// bahan itu dikeluarkan dari resep kopi, dan menu yang tidak memakainya otomatis tidak dicentang.
+function jadikanTetap(b, qtyManual){
+  const kopi = state.produk.filter(p => p.kategori === 'Kopi');
+  const pakai = kopi.map(p => p.items.filter(i => i.bahanId === b.id).reduce((s,i) => s + num(i.qty), 0));
+  const xs = pakai.filter(v => v > 0).sort((a,c) => a - c);
+  const id = uid();
+  biayaTetap.push({id, bahanId: b.id, qty: qtyManual > 0 ? qtyManual : (xs.length ? xs[Math.floor(xs.length/2)] : 1)});
+  kopi.forEach((p, ix) => {
+    if(!pakai[ix]) p.tetapOff = [...(p.tetapOff || []), id];
+    if(pakai[ix]) p.items = p.items.filter(i => i.bahanId !== b.id);   // ikut tersimpan lewat save()
+  });
+  return xs.length;
+}
+function lepasTetap(bahanId){ biayaTetap = biayaTetap.filter(t => t.bahanId !== bahanId); }
 
 // Bahan dari kelompok lama "Umum" dipindah ke Kopi/Kue sesuai resep yang memakainya.
 // Dipakai keduanya: dibuat salinan untuk kue, dan resep kue diarahkan ke salinan itu.
@@ -1090,11 +1071,10 @@ function hitung(p){
   const baris = p.items.map(i => { const b = bahanById(i.bahanId); return {b, biaya: hargaSatuan(b)*num(i.qty)*(i.per==='porsi'?porsi:1)}; });
   const totalBahan = baris.reduce((s,x)=>s+x.biaya,0);
   const totalLain = p.lain.reduce((s,x)=>s+num(x.nilai),0);
-  // Biaya tetap per cup (cup + tutup, es batu) — hanya menu kopi, bisa dimatikan per menu
-  // (kalau cup/es masih tercatat sebagai bahan di resep ini, biaya tetapnya dilewati supaya tidak dihitung dua kali)
-  const adaBahan = pola => p.items.some(i => pola.test((bahanById(i.bahanId) || {}).nama || ''));
-  const tetapDipakai = p.kategori === 'Kopi' ? biayaTetap.filter(t => !(p.tetapOff || []).includes(t.id)
-    && !(t.id === 'cup' && adaBahan(polaCup)) && !(t.id === 'es' && adaBahan(polaEs))) : [];
+  // Bahan tetap per cup (dicentang di tab Bahan Baku) — hanya menu kopi, bisa dimatikan per menu
+  // (kalau bahan itu juga ada di resep ini, biaya tetapnya dilewati supaya tidak dihitung dua kali)
+  const tetapDipakai = p.kategori === 'Kopi' ? tetapList().filter(t => !(p.tetapOff || []).includes(t.id)
+    && !p.items.some(i => i.bahanId === t.bahanId)) : [];
   const tetapPerPorsi = tetapDipakai.reduce((s,t) => s + num(t.biaya), 0);
   const totalTetap = tetapPerPorsi * porsi;
   const hpp = (totalBahan+totalLain+totalTetap)/porsi;
@@ -1291,7 +1271,8 @@ function renderOwnerAll(){ renderBahan(); renderList(); if(currentTab === 'produ
 function contohButton(){ return state.bahan.length || state.produk.length ? '' : `<p style="margin-top:12px"><button class="btn primary" type="button" data-isi-contoh>Isi dengan data contoh</button></p>`; }
 document.addEventListener('click', e => {
   if(!e.target.closest('[data-isi-contoh]')) return;
-  pendingMenu.clear(); state = migrate(contoh()); sel = state.produk[0].id; save(); simpanTetap(); renderOwnerAll();
+  pendingMenu.clear(); state = migrate(contoh()); sel = state.produk[0].id;
+  biayaTetap = TETAP_AWAL.map(t => ({...t})); konversiTetapLama(); save(); simpanTetap(); renderOwnerAll();
 });
 
 function renderList(){
@@ -1339,7 +1320,8 @@ function bahanOptions(selId, list, pref){
   const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue'};
   const opt = b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`;
   if(pref === 'Kopi' || pref === 'Kue'){
-    const milik = sorted.filter(b => kat(b) === pref);
+    // Bahan tetap (cup, es batu, …) tidak dipilih di resep kopi — sudah otomatis
+    const milik = sorted.filter(b => kat(b) === pref && !(pref === 'Kopi' && tetapDari(b.id) && b.id !== selId));
     const lain = sorted.find(b => b.id === selId && kat(b) !== pref);   // bahan lama dari kelompok lain tetap terlihat
     return `<option value="">${milik.length ? 'Pilih bahan ' + pref.toLowerCase() + '…' : 'Belum ada bahan ' + pref.toLowerCase() + ' — tambah di tab Bahan Baku'}</option>` + milik.map(opt).join('') +
       (lain ? `<optgroup label="Kelompok ${kat(lain)} (sebaiknya diganti)">${opt(lain)}</optgroup>` : '');
@@ -1353,8 +1335,8 @@ function tetapSection(p){
   const off = p.tetapOff || [];
   return `<div class="tetap-box">
     <div class="sub"><h3>Biaya tetap per cup</h3><b class="num" id="tetapTotal"></b></div>
-    <div class="tetap-list">${biayaTetap.length ? biayaTetap.map(t => `<label class="cek"><input type="checkbox" data-tetap="${esc(t.id)}" ${off.includes(t.id) ? '' : 'checked'}> ${esc(t.nama) || 'Tanpa nama'} <span class="muted num">${rp(t.biaya)}</span></label>`).join('') : '<span class="note">Belum ada biaya tetap. Atur di tab Bahan Baku.</span>'}</div>
-    <p class="note">Nilainya diatur di tab Bahan Baku dan berlaku untuk semua menu kopi. Hilangkan centang kalau menu ini tidak memakainya.</p>
+    <div class="tetap-list">${tetapList().length ? tetapList().map(t => `<label class="cek"><input type="checkbox" data-tetap="${esc(t.id)}" ${off.includes(t.id) ? '' : 'checked'}> ${esc(t.nama) || 'Tanpa nama'} <span class="muted num">${rp(t.biaya)}</span></label>`).join('') : '<span class="note">Belum ada bahan tetap. Centang “Tetap tiap cup” pada bahan di tab Bahan Baku.</span>'}</div>
+    <p class="note">Bahan tetap diatur di tab Bahan Baku dan otomatis masuk ke semua menu kopi. Hilangkan centang kalau menu ini tidak memakainya.</p>
   </div>`;
 }
 function varianSection(p){
@@ -1610,54 +1592,126 @@ function batalMenu(p){
 /* ---------- Bahan baku ---------- */
 const KAT_BAHAN = [['Kopi','☕ Bahan kopi','dot'],['Kue','🍰 Bahan kue','dot kue']];
 const katBahan = b => (b && b.kategori === 'Kue') ? 'Kue' : 'Kopi';
+// Daftar bahan: tampil sebagai teks; klik Edit untuk mengubah satu bahan (Simpan / Batal).
+let bahanFilter = null;   // 'semua' | 'Kopi' | 'Kue' — dibaca dari penyimpanan saat pertama dipakai
+let editB = null;   // {id, baru, d:{nama,kategori,harga,isi,satuan,tetap,qty}}
 function renderBahan(){
-  renderTetap();
+  if(bahanFilter === null) bahanFilter = lsGet('hpp-filter-bahan', 'semua');
+  document.querySelectorAll('#bahanFilter [data-fb]').forEach(x => x.setAttribute('aria-selected', x.dataset.fb === bahanFilter));
+  const w = $('tetapWarn'); if(w) w.hidden = tetapReady;
   const body = $('bahanBody');
-  if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. Klik “+ Tambah” di salah satu kelompok.${contohButton()}</td></tr>`; }
-  const baris = b => `<tr class="brow">
-    <td><input type="text" id="b-n-${b.id}" data-b="${b.id}" data-f="nama" value="${esc(b.nama)}" placeholder="mis. Susu UHT"></td>
-    <td data-l="Kelompok"><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
-    <td data-l="Harga beli (Rp)"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${fmtU(b.harga)}" aria-label="Harga beli"></td>
-    <td data-l="Isi kemasan"><input type="number" min="0" step="any" id="b-i-${b.id}" data-b="${b.id}" data-f="isi" value="${b.isi}" aria-label="Isi kemasan"></td>
-    <td data-l="Satuan"><select id="b-s-${b.id}" data-b="${b.id}" data-f="satuan" aria-label="Satuan">${['gr','ml','pcs'].map(s=>`<option ${s===b.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
-    <td class="r num" data-l="Harga / satuan" data-pu="${b.id}">${rp2(hargaSatuan(b))} / ${esc(b.satuan)}</td>
-    <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-b="${b.id}">✕</button></td></tr>`;
-  if(!state.bahan.length) return;
+  const daftar = [...state.bahan];
+  if(editB && editB.baru) daftar.push({id: editB.id, ...editB.d});
+  if(!daftar.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. <button class="btn small" type="button" data-add-b="Kopi">+ Bahan kopi</button> <button class="btn small" type="button" data-add-b="Kue">+ Bahan kue</button>${contohButton()}</td></tr>`; return; }
   const sortNama = (a,b) => (a.nama||'').localeCompare(b.nama||'','id');
-  body.innerHTML = KAT_BAHAN.map(([k, label, dot]) => {
-    const list = state.bahan.filter(b => katBahan(b) === k).sort(sortNama);
-    return `<tr class="grp"><td colspan="7"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b><span class="${dot}" style="margin-right:8px"></span>${label} <span class="muted" style="font-weight:400">(${list.length})</span></b><button class="btn small" type="button" data-add-b="${k}">+ Tambah</button></div></td></tr>` +
-      (list.length ? list.map(baris).join('') : `<tr><td colspan="7" class="note" style="padding:10px 6px">Belum ada bahan di kelompok ini.</td></tr>`);
+  const kelompok = KAT_BAHAN.filter(([k]) => bahanFilter === 'semua' || bahanFilter === k);
+  body.innerHTML = kelompok.map(([k, label, dot]) => {
+    const list = daftar.filter(b => (editB && editB.id === b.id ? editB.d.kategori : katBahan(b)) === k).sort(sortNama);
+    if(editB && editB.baru){ const i = list.findIndex(b => b.id === editB.id); if(i > 0) list.unshift(list.splice(i, 1)[0]); }
+    return `<tr class="grp"><td colspan="7"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b><span class="${dot}" style="margin-right:8px"></span>${label} <span class="muted" style="font-weight:400">(${list.filter(b => !(editB && editB.baru && b.id === editB.id)).length})</span></b><button class="btn small" type="button" data-add-b="${k}">+ Tambah</button></div></td></tr>` +
+      (list.length ? list.map(b => editB && editB.id === b.id ? barisEdit(b.id, editB.d) : barisBahan(b)).join('') : `<tr><td colspan="7" class="note" style="padding:10px 6px">Belum ada bahan di kelompok ini.</td></tr>`);
   }).join('');
 }
-$('bahanBody').addEventListener('change', e => {
-  const t = e.target, b = bahanById(t.dataset.b); if(!b || t.dataset.f !== 'kategori') return;
-  renderBahan();   // pindahkan baris ke kelompok barunya
-  const n = $('b-n-' + b.id); n && n.scrollIntoView({block:'center'});
+function barisBahan(b){
+  const t = katBahan(b) === 'Kopi' ? tetapDari(b.id) : null;
+  return `<tr class="brow">
+    <td><b>${esc(b.nama) || '<span class="muted">(tanpa nama)</span>'}</b>${t ? `<div><span class="chip neutral" style="margin-top:4px">Tetap tiap cup · ${num(t.qty).toLocaleString('id-ID')} ${esc(b.satuan)} = ${rp(hargaSatuan(b) * num(t.qty))}</span></div>` : ''}</td>
+    <td data-l="Kelompok">${katBahan(b)}</td>
+    <td class="r num" data-l="Harga beli">${rp(b.harga)}</td>
+    <td class="r num" data-l="Isi kemasan">${num(b.isi).toLocaleString('id-ID')}</td>
+    <td data-l="Satuan">${esc(b.satuan)}</td>
+    <td class="r num" data-l="Harga / satuan">${rp2(hargaSatuan(b))} / ${esc(b.satuan)}</td>
+    <td><button class="btn small" type="button" data-edit-b="${b.id}" aria-label="Edit ${esc(b.nama)}">Edit</button></td></tr>`;
+}
+function barisEdit(id, d){
+  const kopi = d.kategori === 'Kopi';
+  return `<tr class="brow sedang-edit">
+    <td><input type="text" id="b-n-${id}" data-bf="nama" value="${esc(d.nama)}" placeholder="mis. Susu UHT" aria-label="Nama bahan"></td>
+    <td data-l="Kelompok"><select data-bf="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===d.kategori?'selected':''}>${k}</option>`).join('')}</select></td>
+    <td data-l="Harga beli (Rp)"><input type="text" inputmode="numeric" class="uang" autocomplete="off" data-bf="harga" value="${fmtU(d.harga)}" aria-label="Harga beli"></td>
+    <td data-l="Isi kemasan"><input type="number" min="0" step="any" data-bf="isi" value="${d.isi}" aria-label="Isi kemasan"></td>
+    <td data-l="Satuan"><select data-bf="satuan" aria-label="Satuan">${['gr','ml','pcs'].map(s=>`<option ${s===d.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td class="r num" data-l="Harga / satuan" id="b-pu">${rp2(hargaSatuan(d))} / ${esc(d.satuan)}</td>
+    <td></td></tr>
+  <tr class="edit-bawah"><td colspan="7"><div class="edit-aksi">
+    ${kopi ? `<label class="cek"><input type="checkbox" data-bf="tetap" ${d.tetap ? 'checked' : ''}> Tetap tiap cup</label>
+      <label class="field tetap-qty" ${d.tetap ? '' : 'hidden'}><span>Takaran per cup (${esc(d.satuan)})</span><input type="number" min="0" step="any" data-bf="qty" value="${d.qty}" placeholder="kosong = ambil dari resep"></label>
+      <span class="note tetap-info" ${d.tetap ? '' : 'hidden'} id="b-tetap-info"></span>` : ''}
+    <span style="flex:1"></span>
+    ${editB && !editB.baru ? `<button class="btn ghost" type="button" data-del-b="${id}">Hapus bahan</button>` : ''}
+    <button class="btn" type="button" data-batal-b>Batal</button>
+    <button class="btn primary" type="button" data-simpan-b>Simpan</button>
+  </div><p class="msg err" id="b-err" hidden></p></td></tr>`;
+}
+function infoTetap(){
+  const el = $('b-tetap-info'); if(!el || !editB) return;
+  const q = num(editB.d.qty);
+  el.textContent = q > 0 ? `= ${rp(hargaSatuan(editB.d) * q)} per cup` : '';
+}
+function mulaiEditBahan(id, baru){
+  if(editB && editB.id !== id && !confirm('Perubahan bahan yang sedang diedit belum disimpan. Tinggalkan?')) return;
+  if(baru) editB = {id: uid(), baru: true, d: {nama:'', kategori: baru, harga:0, isi:1000, satuan:'gr', tetap:false, qty:''}};
+  else {
+    const b = bahanById(id), t = tetapDari(id);
+    editB = {id, baru: false, d: {nama:b.nama, kategori:katBahan(b), harga:b.harga, isi:b.isi, satuan:b.satuan, tetap: !!t, qty: t ? t.qty : ''}};
+  }
+  if(bahanFilter !== 'semua' && bahanFilter !== editB.d.kategori) bahanFilter = editB.d.kategori;
+  renderBahan(); infoTetap();
+  const n = $('b-n-' + editB.id); if(n){ n.focus(); n.scrollIntoView({block:'center'}); }
+}
+function simpanBahan(){
+  const d = editB.d, err = $('b-err');
+  if(!(d.nama || '').trim()){ err.textContent = 'Isi nama bahan dulu.'; err.hidden = false; $('b-n-' + editB.id).focus(); return; }
+  if(!(num(d.isi) > 0)){ err.textContent = 'Isi kemasan harus lebih dari 0.'; err.hidden = false; return; }
+  let b = editB.baru ? null : bahanById(editB.id);
+  if(!b){ b = {id: editB.id}; state.bahan.push(b); }
+  Object.assign(b, {nama: d.nama.trim(), kategori: d.kategori, harga: num(d.harga), isi: num(d.isi), satuan: d.satuan});
+  // Bahan tetap per cup
+  const lama = tetapDari(b.id), mauTetap = d.kategori === 'Kopi' && d.tetap;
+  let pesan = '✓ Bahan disimpan';
+  if(lama && !mauTetap) lepasTetap(b.id);
+  else if(!lama && mauTetap){ const n = jadikanTetap(b, num(d.qty)); pesan = n ? `✓ ${b.nama} jadi bahan tetap dan dikeluarkan dari ${n} resep kopi` : `✓ ${b.nama} jadi bahan tetap tiap cup`; }
+  else if(lama && mauTetap && num(d.qty) > 0) lama.qty = num(d.qty);
+  if(!!lama !== mauTetap || (lama && mauTetap)) simpanTetap();
+  editB = null;
+  save(); renderBahan(); renderSummary(); renderList(); if(currentTab === 'produk') renderEditor();
+  toast(pesan, 'ok');
+}
+$('bahanFilter').addEventListener('click', e => {
+  const x = e.target.closest('[data-fb]'); if(!x) return;
+  bahanFilter = x.dataset.fb; lsSet('hpp-filter-bahan', bahanFilter); renderBahan();
 });
 $('bahanBody').addEventListener('input', e => {
-  const t = e.target, b = bahanById(t.dataset.b); if(!b) return;
-  b[t.dataset.f] = (t.dataset.f==='harga'||t.dataset.f==='isi') ? num(t.value) : t.value;
-  const pu = document.querySelector(`[data-pu="${b.id}"]`); if(pu) pu.textContent = `${rp2(hargaSatuan(b))} / ${b.satuan}`;
-  save(); renderSummary(); renderList();
+  const t = e.target, f = t.dataset.bf; if(!f || !editB) return;
+  editB.d[f] = f === 'tetap' ? t.checked : (f === 'harga' || f === 'isi') ? num(t.value) : t.value;
+  if(f === 'kategori' || f === 'satuan'){ renderBahan(); infoTetap(); return; }
+  if(f === 'tetap'){ document.querySelectorAll('.tetap-qty, .tetap-info').forEach(x => x.hidden = !t.checked); }
+  const pu = $('b-pu'); if(pu) pu.textContent = `${rp2(hargaSatuan(editB.d))} / ${editB.d.satuan}`;
+  const er = $('b-err'); if(er) er.hidden = true;
+  infoTetap();
+});
+$('bahanBody').addEventListener('keydown', e => {
+  if(!editB || !e.target.dataset.bf) return;
+  if(e.key === 'Enter'){ e.preventDefault(); simpanBahan(); }
+  if(e.key === 'Escape'){ editB = null; renderBahan(); }
 });
 $('bahanBody').addEventListener('click', e => {
-  const add = e.target.closest('[data-add-b]');
-  if(add){ tambahBahan(add.dataset.addB); return; }
+  const add = e.target.closest('[data-add-b]'); if(add){ mulaiEditBahan(null, add.dataset.addB); return; }
+  const ed = e.target.closest('[data-edit-b]'); if(ed){ mulaiEditBahan(ed.dataset.editB); return; }
+  if(e.target.closest('[data-batal-b]')){ editB = null; renderBahan(); return; }
+  if(e.target.closest('[data-simpan-b]')){ simpanBahan(); return; }
   const t = e.target.closest('[data-del-b]'); if(!t) return;
   const id = t.dataset.delB, b = bahanById(id);
   const dipakai = state.produk.filter(p => p.items.some(i => i.bahanId===id) || p.varian.some(v => v.items.some(i => i.bahanId===id))).map(p=>p.nama);
-  const tanya = dipakai.length ? `“${b.nama}” dipakai di: ${dipakai.join(', ')}.\nBahan ini juga akan dihapus dari resep tersebut. Lanjutkan?` : `Hapus “${b.nama}”?`;
+  const tanya = dipakai.length ? `“${b.nama}” dipakai di: ${dipakai.join(', ')}.\nBahan ini juga akan dihapus dari resep tersebut. Lanjutkan?` : tetapDari(id) ? `Hapus “${b.nama}”? Bahan ini juga keluar dari biaya tetap semua menu kopi.` : `Hapus “${b.nama}”?`;
   if(!confirm(tanya)) return;
   state.bahan = state.bahan.filter(x=>x.id!==id);
   state.produk.forEach(p => { p.items = p.items.filter(i=>i.bahanId!==id); p.varian.forEach(v => v.items = v.items.filter(i=>i.bahanId!==id)); });
+  if(tetapDari(id)){ lepasTetap(id); simpanTetap(); }
+  editB = null;
   save(); renderBahan(); renderSummary(); renderList();
 });
-function tambahBahan(kategori){
-  const b = {id:uid(),nama:'',harga:0,isi:1000,satuan:'gr',kategori:kategori||'Kopi'};
-  state.bahan.push(b); save(); renderBahan();
-  const n = $('b-n-'+b.id); if(n){ n.focus(); n.scrollIntoView({block:'center'}); }
-}
+function tambahBahan(kategori){ mulaiEditBahan(null, kategori || 'Kopi'); }
 
 /* ---------- Ringkasan ---------- */
 function renderSummary(){
