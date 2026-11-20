@@ -9,16 +9,17 @@
 <link rel="apple-touch-icon" href="logo.webp">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Layout: alat kerja — daftar menu di kiri, resep + hasil di kanan; tab berbeda untuk pemilik dan karyawan */
 :root{
-  --bg:#ecebe8; --surface:#ffffff; --surface-2:#e4e1dc; --line:#d8d3cb;
-  --fg:#1d1a18; --muted:#5c5650;
-  --accent:#9a5b25; --accent-ink:#ffffff; --accent-soft:#f3e6d8;
+  --bg:#f4efe8; --surface:#fffdf9; --surface-2:#ece4d9; --line:#e6dccf;
+  --fg:#3a2a1d; --muted:#7a6553;
+  --accent:#9a5b25; --accent-ink:#ffffff; --accent-soft:#f3e7da;
+  --karamel:#9a5b25; --krem:#fff7ee;
   --kue:#5f7a3a; --kue-soft:#e6eedb;
   --good:#2f7a4a; --good-soft:#dcefe2; --warn:#a46a00; --warn-soft:#fbecc9; --bad:#b33a2b; --bad-soft:#f8dcd7;
-  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-display:"Cormorant Garamond", Georgia, "Times New Roman", serif;
   --f-body:"Inter", "Segoe UI", system-ui, sans-serif;
   --r:10px;
   color-scheme:light;
@@ -27,6 +28,7 @@
   --bg:#171310; --surface:#211b17; --surface-2:#2b241f; --line:#3d342d;
   --fg:#f1e9e1; --muted:#a8998c;
   --accent:#d9a066; --accent-ink:#1a120c; --accent-soft:#3a2a1f;
+  --karamel:#7a4a22; --krem:#fff2e2;
   --kue:#9dbb6f; --kue-soft:#2b3322;
   --good:#6cc28b; --good-soft:#1f3327; --warn:#e3b04f; --warn-soft:#3a2f17; --bad:#ef7f6f; --bad-soft:#3d221e;
   color-scheme:dark;}}
@@ -36,10 +38,11 @@
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding-block:max(24px, env(safe-area-inset-top, 0px)) 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
-h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:clamp(24px,4vw,34px);font-weight:800}
-h2{font-size:20px;font-weight:600}
-h3{font-size:15px;font-weight:600}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1,h2{font-family:var(--f-display);font-variant-numeric:lining-nums}
+h1{font-size:clamp(26px,4vw,34px);font-weight:700;letter-spacing:.01em}
+h2{font-size:23px;font-weight:700}
+h3{font-family:var(--f-body);font-size:15px;font-weight:600}
 .num{font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
@@ -267,6 +270,86 @@ details.card>summary{cursor:pointer;list-style-position:inside}
 .lap-grid>*{min-width:0}
 .hbar{height:8px;border-radius:999px;background:var(--accent);min-width:2px}
 @media (prefers-reduced-motion: no-preference){.bar span{transition:width .25s ease}}
+
+/* ====== Desain "Kafe hangat" (laptop & tablet) ====== */
+.hpp-big,.big-price,.suggest strong,.stat b,.tile .v,.yield-total,.cartbar span{font-family:var(--f-display);font-weight:700;font-variant-numeric:lining-nums tabular-nums}
+.hpp-big{font-size:44px}
+.panel{border-radius:14px}
+nav.tabs{background:transparent;padding:0;gap:6px}
+nav.tabs button{background:transparent;color:var(--muted);padding:8px 16px}
+nav.tabs button:hover{color:var(--fg);background:var(--surface)}
+nav.tabs button[aria-selected="true"]{background:var(--karamel);color:var(--krem);box-shadow:none}
+nav.tabs .ico{display:none}
+nav.tabs{flex-wrap:wrap;overflow:visible}
+/* Tablet berdiri: daftar menu jadi beberapa kolom supaya resep cepat terlihat */
+@media (min-width:700px) and (max-width:860px){
+  .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+  .plist .cat,.plist>.note{grid-column:1/-1}
+  .pitem{background:var(--surface);border-color:var(--line)}
+}
+nav.tabs .lainnya,.more-menu{display:none}
+.pitem[aria-current="true"]{background:var(--surface);border-color:var(--line);box-shadow:inset 3px 0 0 var(--karamel)}
+.pitem .j{display:none}
+.pitem.rugi .h{color:var(--bad);font-weight:600}
+.back-hp{display:none}
+/* Kartu hasil HPP berwarna karamel */
+.result{background:var(--karamel);border-color:var(--karamel);color:var(--krem);
+  --fg:var(--krem); --muted:#f0d9bf; --line:rgba(255,247,238,.22); --surface:rgba(255,247,238,.12); --surface-2:rgba(0,0,0,.2);
+  --accent:#f1d3a8; --accent-soft:rgba(255,247,238,.12); --kue:#d39a5c; --tetap:#fff7ee; --bad:#ffc9bd}
+.result .bar span:nth-child(3){background:var(--tetap)!important}
+.result .legend i[style*="--muted"]{background:var(--tetap)!important}
+.result .chip{background:var(--krem)!important}
+.result .chip.good{color:#2f7a4a}.result .chip.warn{color:#8a5a00}.result .chip.bad{color:#b33a2b}.result .chip.neutral{color:#7a6553}
+.result .btn{color:var(--krem);border-color:rgba(255,247,238,.4)}
+.result .btn:hover{border-color:var(--krem)}
+
+/* ====== Desain "Ubin besar" (HP) ====== */
+@media (max-width:699px){
+  .wrap{padding-top:max(14px, env(safe-area-inset-top, 0px));padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px))}
+  header.top{margin-bottom:12px;align-items:center}
+  header.top .note{display:none}
+  .who{gap:6px}
+  /* Menu bawah seperti aplikasi */
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;width:auto;max-width:none;margin:0;border-radius:0;
+    background:var(--surface);border-top:1px solid var(--line);display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;overflow:visible;
+    padding:6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px))}
+  nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  nav.tabs button[aria-selected="true"],nav.tabs button.aktif{background:transparent;color:var(--karamel)}
+  nav.tabs button[aria-selected="true"] .ico,nav.tabs button.aktif .ico{background:var(--accent-soft)}
+  nav.tabs .ico{display:grid;place-items:center;width:44px;height:28px;border-radius:999px}
+  nav.tabs .ico svg{width:20px;height:20px}
+  nav.tabs .lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  nav.tabs button.tambahan{display:none}
+  nav.tabs .lainnya{display:flex}
+  .more-menu:not([hidden]){display:flex;flex-direction:column;position:fixed;right:10px;bottom:calc(74px + env(safe-area-inset-bottom, 0px));z-index:52;
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px;min-width:190px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .more-menu button{border:0;background:transparent;text-align:left;padding:12px 14px;border-radius:10px;font-weight:500;cursor:pointer}
+  .more-menu button[aria-selected="true"]{background:var(--accent-soft);color:var(--karamel)}
+  /* Daftar menu jadi ubin 2 kolom */
+  .plist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .plist .cat,.plist>.note{grid-column:1/-1}
+  .plist .cat{margin:6px 0 0}
+  .pitem{flex-direction:column;align-items:flex-start;justify-content:space-between;gap:6px;min-height:84px;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+  .pitem[aria-current="true"]{box-shadow:none;border-color:var(--line)}
+  .pitem .n{white-space:normal;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .pitem .dot{display:none}
+  .pitem .h,.pitem .j{display:block;font-size:12px;color:var(--muted)}
+  .pitem.rugi{background:var(--bad-soft);border-color:transparent}
+  .pitem.rugi .h,.pitem.rugi .j{color:var(--bad)}
+  .addrow{display:grid;grid-template-columns:1fr 1fr}
+  .addrow .btn{padding:12px}
+  /* Pilih menu -> layar detail; tombol kembali ke daftar */
+  .grid>aside{display:block}
+  .grid>.detail{display:none}
+  body.lihat-detail .grid>aside{display:none}
+  body.lihat-detail .grid>.detail{display:block}
+  body.lihat-detail .back-hp{display:inline-flex;margin-bottom:10px}
+  .result{position:static}
+  /* Kasir & notifikasi naik di atas menu bawah */
+  .cartbar{bottom:calc(64px + env(safe-area-inset-bottom, 0px));padding-bottom:10px}
+  #tab-kasir{padding-bottom:80px}
+  .toast{bottom:calc(150px + env(safe-area-inset-bottom, 0px))}
+}
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -345,6 +428,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
     </header>
 
     <nav class="tabs" role="tablist" id="tabs"></nav>
+    <div class="more-menu" id="moreMenu" hidden></div>
 
     <!-- PEMILIK: Menu & HPP -->
     <section id="tab-produk" hidden>
@@ -356,7 +440,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
             <button class="btn" type="button" data-add="Kue">+ Menu kue</button>
           </div>
         </aside>
-        <div id="editor"></div>
+        <div class="detail"><button class="btn back-hp" type="button" data-kembali>‹ Semua menu</button><div id="editor"></div></div>
       </div>
     </section>
 
@@ -565,7 +649,7 @@ details.card>summary{cursor:pointer;list-style-position:inside}
     <section id="tab-resep" hidden>
       <div class="grid">
         <aside><div class="plist" id="rlist"></div></aside>
-        <div id="resepDetail"></div>
+        <div class="detail"><button class="btn back-hp" type="button" data-kembali>‹ Semua menu</button><div id="resepDetail"></div></div>
       </div>
     </section>
 
@@ -1122,14 +1206,54 @@ const TABS = {
   karyawan:[['kasir','Kasir'],['resep','Resep & Menu'],['belanja','Catat Belanja']],
 };
 const ALL_TABS = ['produk','bahan','ringkasan','kasir','laporan','biaya','resep','belanja','tim'];
+// Ikon menu bawah (HP)
+const ikon = d => `<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
+const IKON = {
+  produk:'<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v3M12 3v3"/>',
+  resep:'<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v3M12 3v3"/>',
+  bahan:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+  kasir:'<rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 10V5h10v5M7 15h2M11 15h2M15 15h2"/>',
+  laporan:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  ringkasan:'<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+  biaya:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  belanja:'<path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+  tim:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 6"/>',
+  lainnya:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+};
+// Di HP hanya 4 tab utama tampil di menu bawah; sisanya di "Lainnya"
+const TAB_UTAMA = { owner:['produk','bahan','kasir','laporan'], karyawan:['kasir','resep','belanja'] };
+const LABEL_HP = { produk:'Menu', bahan:'Bahan', ringkasan:'Ringkasan', resep:'Resep', belanja:'Belanja', tim:'Karyawan' };
 function buildTabs(){
-  $('tabs').innerHTML = TABS[me.role].map(([k,l]) => `<button role="tab" type="button" data-tab="${k}" aria-selected="false">${l}</button>`).join('');
+  const utama = TAB_UTAMA[me.role] || [], semua = TABS[me.role], lain = semua.filter(([k]) => !utama.includes(k));
+  $('tabs').innerHTML = semua.map(([k,l]) => `<button role="tab" type="button" data-tab="${k}" aria-selected="false" class="${utama.includes(k) ? '' : 'tambahan'}" title="${l}">${ikon(IKON[k] || '')}<span class="lbl">${window.matchMedia('(max-width:699px)').matches ? (LABEL_HP[k] || l) : l}</span></button>`).join('')
+    + (lain.length ? `<button type="button" class="lainnya" id="tabLainnya" aria-haspopup="true" aria-expanded="false">${ikon(IKON.lainnya)}<span class="lbl">Lainnya</span></button>` : '');
+  $('moreMenu').innerHTML = lain.map(([k,l]) => `<button type="button" data-tab="${k}" aria-selected="false">${l}</button>`).join('');
 }
-$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if(b) openTab(b.dataset.tab); });
+function tutupLainnya(){ $('moreMenu').hidden = true; const b = $('tabLainnya'); if(b) b.setAttribute('aria-expanded', 'false'); }
+$('tabs').addEventListener('click', e => {
+  if(e.target.closest('#tabLainnya')){ const m = $('moreMenu'); m.hidden = !m.hidden; e.currentTarget.querySelector('#tabLainnya').setAttribute('aria-expanded', String(!m.hidden)); return; }
+  const b = e.target.closest('[data-tab]'); if(b){ tutupLainnya(); openTab(b.dataset.tab); }
+});
+$('moreMenu').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if(b){ tutupLainnya(); openTab(b.dataset.tab); } });
+document.addEventListener('click', e => { if(!e.target.closest('#moreMenu, #tabLainnya')) tutupLainnya(); });
+// Label tab ikut ukuran layar (HP: label pendek)
+window.matchMedia('(max-width:699px)').addEventListener('change', () => { if(me && me.role && $('tabs').children.length){ buildTabs(); if(currentTab) tandaiTab(currentTab); } });
+function tandaiTab(name){
+  document.querySelectorAll('#tabs [data-tab], #moreMenu [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
+  const lb = $('tabLainnya'); if(lb) lb.classList.toggle('aktif', !!$('moreMenu').querySelector(`[data-tab="${name}"]`));
+}
+// HP: daftar menu (ubin) <-> layar detail
+function lihatDetail(on){
+  document.body.classList.toggle('lihat-detail', !!on);
+  if(on && window.matchMedia('(max-width:699px)').matches) window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => { if(e.target.closest('[data-kembali]')){ lihatDetail(false); window.scrollTo(0, 0); } });
 function openTab(name){
   currentTab = name;
   bukaSheet(false);
-  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
+  lihatDetail(false);
+  tandaiTab(name);
+  if(window.matchMedia('(max-width:699px)').matches) window.scrollTo(0, 0);
   ALL_TABS.forEach(t => $('tab-'+t).hidden = t !== name);
   if(name === 'produk') renderEditor();
   if(name === 'belanja'){ renderBelanjaForm(); loadBelanja(); }
@@ -1157,26 +1281,40 @@ function renderList(){
     html += `<div class="label cat">${k}</div>`;
     if(!ps.length) html += `<div class="note" style="padding:4px 12px">Belum ada menu ${k.toLowerCase()}.</div>`;
     ps.forEach(p => {
-      const h = hitung(p);
-      html += `<button type="button" class="pitem" data-sel="${p.id}" aria-current="${p.id===sel}">
+      const h = hitung(p), rugi = !h.varian.length && h.jual > 0 && h.laba < 0;
+      html += `<button type="button" class="pitem${rugi ? ' rugi' : ''}" data-sel="${p.id}" aria-current="${p.id===sel}">
         <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':''}"></span><span class="n">${esc(p.nama)||'Tanpa nama'}</span></span>
-        <span class="h num">${pendingMenu.has(p.id) ? `<span class="chip warn" style="padding:1px 7px">${saved.menu.has(p.id) ? 'Diubah' : 'Draf'}</span>` : hppLabel(h)}</span></button>`;
+        <span><span class="h num">${pendingMenu.has(p.id) ? `<span class="chip warn" style="padding:1px 7px">${saved.menu.has(p.id) ? 'Diubah' : 'Draf'}</span>` : 'HPP ' + hppLabel(h)}</span>
+        <span class="j num">${h.varian.length ? h.varian.length + ' varian' : rugi ? 'Rugi · jual ' + rp(h.jual) : h.jual > 0 ? 'Jual ' + rp(h.jual) : 'Harga jual belum diisi'}</span></span></button>`;
     });
   });
   $('plist').innerHTML = html;
 }
-$('plist').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if(!b) return; sel = b.dataset.sel; renderList(); renderEditor(); });
+$('plist').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if(!b) return; sel = b.dataset.sel; renderList(); renderEditor(); lihatDetail(true); });
 document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
   const k = btn.dataset.add;
   const p = {id:uid(),nama:k==='Kopi'?'Menu kopi baru':'Menu kue baru',kategori:k,hasil:1,potong:k==='Kopi'?1:12,margin:55,hargaJual:0,items:[],lain:[],varian:[]};
-  state.produk.push(p); sel = p.id; pendingMenu.add(p.id); renderList(); renderEditor();
+  state.produk.push(p); sel = p.id; pendingMenu.add(p.id); renderList(); renderEditor(); lihatDetail(true);
   const n = $('pNama'); if(n){ n.focus(); n.select(); }
 }));
 
 // Pilihan bahan: resep kopi hanya bahan kopi, resep kue hanya bahan kue.
 // Tanpa jenis (form belanja): dua kelompok ditampilkan.
+// Berapa menu yang memakai tiap bahan (resep utama + varian), untuk mengurutkan pilihan bahan
+function hitungPemakaian(){
+  const n = {}, menus = (state.produk && state.produk.length) ? state.produk : (staff.menu || []);
+  menus.forEach(p => {
+    const ids = new Set();
+    (p.items || []).forEach(i => i.bahanId && ids.add(i.bahanId));
+    (p.varian || []).forEach(v => (v.items || []).forEach(i => i.bahanId && ids.add(i.bahanId)));
+    ids.forEach(id => { n[id] = (n[id] || 0) + 1; });
+  });
+  return n;
+}
 function bahanOptions(selId, list, pref){
-  const sorted = [...(list || state.bahan)].sort((a,b)=>(a.nama||'').localeCompare(b.nama||'','id'));
+  const pakai = hitungPemakaian();
+  // Yang paling sering dipakai di atas; kalau sama, urut abjad
+  const sorted = [...(list || state.bahan)].sort((a,b) => (pakai[b.id]||0) - (pakai[a.id]||0) || (a.nama||'').localeCompare(b.nama||'','id'));
   const kat = b => b.kategori === 'Kue' ? 'Kue' : 'Kopi';
   const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue'};
   const opt = b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`;
@@ -1541,7 +1679,7 @@ function renderResepList(){
   });
   $('rlist').innerHTML = html || `<p class="note" style="padding:4px 12px">Belum ada menu.</p>`;
 }
-$('rlist').addEventListener('click', e => { const b = e.target.closest('[data-rsel]'); if(!b) return; rsel = b.dataset.rsel; renderResepList(); renderResep(); });
+$('rlist').addEventListener('click', e => { const b = e.target.closest('[data-rsel]'); if(!b) return; rsel = b.dataset.rsel; renderResepList(); renderResep(); lihatDetail(true); });
 function renderResep(){
   const el = $('resepDetail'); let x = staff.menu.find(m => m.id === rsel);
   if(!x){ el.innerHTML = `<div class="panel empty">Belum ada menu dari pemilik.</div>`; return; }
