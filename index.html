@@ -336,6 +336,26 @@ nav.tabs .lainnya,.more-menu{display:none}
   .pitem .h,.pitem .j{display:block;font-size:12px;color:var(--muted)}
   .pitem.rugi{background:var(--bad-soft);border-color:transparent}
   .pitem.rugi .h,.pitem.rugi .j{color:var(--bad)}
+  /* Bahan baku: tiap bahan jadi kartu kecil, tanpa geser ke samping */
+  table.bahan thead{display:none}
+  table.bahan,table.bahan tbody{display:block}
+  table.bahan tr.brow{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) 72px;
+    grid-template-areas:"nama nama del" "harga isi sat" "kat pu pu";gap:8px 8px;padding:12px 0;border-bottom:1px solid var(--line)}
+  table.bahan tr.brow td{display:block;width:auto!important;min-width:0!important;padding:0;border:0}
+  table.bahan tr.brow td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted);margin-bottom:3px;text-align:left}
+  table.bahan tr.brow td:nth-child(1){grid-area:nama}
+  table.bahan tr.brow td:nth-child(1) input{font-weight:600}
+  table.bahan tr.brow td:nth-child(2){grid-area:kat}
+  table.bahan tr.brow td:nth-child(3){grid-area:harga}
+  table.bahan tr.brow td:nth-child(4){grid-area:isi}
+  table.bahan tr.brow td:nth-child(5){grid-area:sat}
+  table.bahan tr.brow td:nth-child(6){grid-area:pu;align-self:end;text-align:right;font-weight:600;padding-bottom:9px}
+  table.bahan tr.brow td:nth-child(6)::before{text-align:right;font-weight:400}
+  table.bahan tr.brow td:nth-child(7){grid-area:del;justify-self:end;align-self:center}
+  table.bahan tr.grp,table.bahan tr:not(.brow){display:block}
+  table.bahan tr.grp td,table.bahan tr:not(.brow) td{display:block;width:100%!important;box-sizing:border-box}
+  #tetapBody td:first-child{width:58%}
+  table.bahan tbody tr.grp:not(:first-child) td{border-top:0;margin-top:14px}
   .addrow{display:grid;grid-template-columns:1fr 1fr}
   .addrow .btn{padding:12px}
   /* Pilih menu -> layar detail; tombol kembali ke daftar */
@@ -1594,13 +1614,13 @@ function renderBahan(){
   renderTetap();
   const body = $('bahanBody');
   if(!state.bahan.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. Klik “+ Tambah” di salah satu kelompok.${contohButton()}</td></tr>`; }
-  const baris = b => `<tr>
+  const baris = b => `<tr class="brow">
     <td><input type="text" id="b-n-${b.id}" data-b="${b.id}" data-f="nama" value="${esc(b.nama)}" placeholder="mis. Susu UHT"></td>
-    <td><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
-    <td><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${fmtU(b.harga)}"></td>
-    <td><input type="number" min="0" step="any" id="b-i-${b.id}" data-b="${b.id}" data-f="isi" value="${b.isi}"></td>
-    <td><select id="b-s-${b.id}" data-b="${b.id}" data-f="satuan">${['gr','ml','pcs'].map(s=>`<option ${s===b.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
-    <td class="r num" data-pu="${b.id}">${rp2(hargaSatuan(b))} / ${esc(b.satuan)}</td>
+    <td data-l="Kelompok"><select id="b-k-${b.id}" data-b="${b.id}" data-f="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===katBahan(b)?'selected':''}>${k}</option>`).join('')}</select></td>
+    <td data-l="Harga beli (Rp)"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="b-h-${b.id}" data-b="${b.id}" data-f="harga" value="${fmtU(b.harga)}" aria-label="Harga beli"></td>
+    <td data-l="Isi kemasan"><input type="number" min="0" step="any" id="b-i-${b.id}" data-b="${b.id}" data-f="isi" value="${b.isi}" aria-label="Isi kemasan"></td>
+    <td data-l="Satuan"><select id="b-s-${b.id}" data-b="${b.id}" data-f="satuan" aria-label="Satuan">${['gr','ml','pcs'].map(s=>`<option ${s===b.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td class="r num" data-l="Harga / satuan" data-pu="${b.id}">${rp2(hargaSatuan(b))} / ${esc(b.satuan)}</td>
     <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-b="${b.id}">✕</button></td></tr>`;
   if(!state.bahan.length) return;
   const sortNama = (a,b) => (a.nama||'').localeCompare(b.nama||'','id');
