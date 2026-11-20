@@ -168,10 +168,10 @@ tbody tr:last-child td{border-bottom:0}
 
 /* Bahan */
 .bahan td:nth-child(1){min-width:180px}
-.bahan td:nth-child(2){width:100px;min-width:90px}
-.bahan td:nth-child(3),.bahan td:nth-child(4){width:130px;min-width:100px}
-.bahan td:nth-child(5){width:90px;min-width:80px}
-.bahan td:nth-child(6){width:140px;white-space:nowrap}
+.bahan td:nth-child(2),.bahan td:nth-child(3){width:140px;min-width:100px}
+.bahan td:nth-child(4){width:90px;min-width:80px}
+.bahan td:nth-child(5){width:150px;white-space:nowrap}
+.bahan td:nth-child(6){width:64px}
 .bahan tr.grp td{background:var(--surface-2);padding:8px 10px;border-bottom:0}
 .bahan tr.grp + tr td{border-top:0}
 .bahan tbody tr.grp:not(:first-child) td{border-top:12px solid var(--surface)}
@@ -296,7 +296,8 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
 .edit-aksi{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px}
 .edit-aksi .tetap-qty{width:190px}
 .edit-aksi .note{align-self:center}
-#bahanFilter button{padding:7px 14px}
+#bahanFilter{min-width:300px}
+#bahanFilter button{padding:8px 16px;white-space:nowrap}
 .pitem.rugi .h{color:var(--bad);font-weight:600}
 .back-hp{display:none}
 /* Kartu hasil HPP berwarna karamel */
@@ -347,18 +348,17 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
   table.bahan thead{display:none}
   table.bahan,table.bahan tbody{display:block}
   table.bahan tr.brow{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) 72px;
-    grid-template-areas:"nama nama del" "harga isi sat" "kat pu pu";gap:8px 8px;padding:12px 0;border-bottom:1px solid var(--line)}
+    grid-template-areas:"nama nama del" "harga isi sat" "pu pu pu";gap:8px 8px;padding:12px 0;border-bottom:1px solid var(--line)}
   table.bahan tr.brow td{display:block;width:auto!important;min-width:0!important;padding:0;border:0}
   table.bahan tr.brow td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted);margin-bottom:3px;text-align:left}
   table.bahan tr.brow td:nth-child(1){grid-area:nama}
   table.bahan tr.brow td:nth-child(1) input{font-weight:600}
-  table.bahan tr.brow td:nth-child(2){grid-area:kat}
-  table.bahan tr.brow td:nth-child(3){grid-area:harga}
-  table.bahan tr.brow td:nth-child(4){grid-area:isi}
-  table.bahan tr.brow td:nth-child(5){grid-area:sat}
-  table.bahan tr.brow td:nth-child(6){grid-area:pu;align-self:end;text-align:right;font-weight:600;padding-bottom:9px}
-  table.bahan tr.brow td:nth-child(6)::before{text-align:right;font-weight:400}
-  table.bahan tr.brow td:nth-child(7){grid-area:del;justify-self:end;align-self:center}
+  table.bahan tr.brow td:nth-child(2){grid-area:harga}
+  table.bahan tr.brow td:nth-child(3){grid-area:isi}
+  table.bahan tr.brow td:nth-child(4){grid-area:sat}
+  table.bahan tr.brow td:nth-child(5){grid-area:pu;display:flex!important;justify-content:space-between;align-items:baseline;font-weight:600}
+  table.bahan tr.brow td:nth-child(5)::before{font-weight:400;margin:0}
+  table.bahan tr.brow td:nth-child(6){grid-area:del;justify-self:end;align-self:center}
   table.bahan tr.grp,table.bahan tr:not(.brow){display:block}
   table.bahan tr.grp td,table.bahan tr:not(.brow) td{display:block;width:100%!important;box-sizing:border-box}
   table.bahan tbody tr.grp:not(:first-child) td{border-top:0;margin-top:14px}
@@ -483,18 +483,17 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
         <div class="sub">
           <div>
             <h2>Bahan baku</h2>
-            <p class="note">Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru. Klik <b>Edit</b> untuk mengubah. Bahan kopi yang dipakai di setiap cup (misalnya cup + tutup, es batu) centang <b>Tetap tiap cup</b>, supaya otomatis masuk ke HPP semua menu kopi.</p>
+            <p class="note">Bahan kopi hanya muncul di resep kopi, bahan kue hanya di resep kue. Tulis harga beli dan isi kemasan persis seperti di nota; harga juga otomatis diperbarui setiap ada catatan belanja baru. Klik <b>Edit</b> untuk mengubah. Bahan kopi yang dipakai di setiap cup (misalnya cup + tutup, es batu) centang <b>Tetap tiap cup</b>, supaya otomatis masuk ke HPP semua menu kopi.</p>
           </div>
           <div class="seg" role="tablist" id="bahanFilter" style="min-width:240px">
-            <button type="button" data-fb="semua" aria-selected="true">Semua</button>
-            <button type="button" data-fb="Kopi" aria-selected="false">Kopi</button>
-            <button type="button" data-fb="Kue" aria-selected="false">Kue</button>
+            <button type="button" data-fb="Kopi" aria-selected="true">☕ Bahan kopi</button>
+            <button type="button" data-fb="Kue" aria-selected="false">🍰 Bahan kue</button>
           </div>
         </div>
         <p class="msg err" id="tetapWarn" hidden>Bahan tetap belum bisa disimpan. Jalankan file biaya-tetap.sql di Supabase.</p>
         <div class="tbl-wrap">
           <table class="bahan">
-            <thead><tr><th>Nama bahan</th><th>Kelompok</th><th class="r">Harga beli (Rp)</th><th class="r">Isi kemasan</th><th>Satuan</th><th class="r">Harga / satuan</th><th></th></tr></thead>
+            <thead><tr><th>Nama bahan</th><th class="r">Harga beli (Rp)</th><th class="r">Isi kemasan</th><th>Satuan</th><th class="r">Harga / satuan</th><th></th></tr></thead>
             <tbody id="bahanBody"></tbody>
           </table>
         </div>
@@ -1596,27 +1595,26 @@ const katBahan = b => (b && b.kategori === 'Kue') ? 'Kue' : 'Kopi';
 let bahanFilter = null;   // 'semua' | 'Kopi' | 'Kue' — dibaca dari penyimpanan saat pertama dipakai
 let editB = null;   // {id, baru, d:{nama,kategori,harga,isi,satuan,tetap,qty}}
 function renderBahan(){
-  if(bahanFilter === null) bahanFilter = lsGet('hpp-filter-bahan', 'semua');
+  if(bahanFilter === null) bahanFilter = lsGet('hpp-filter-bahan', 'Kopi');
+  if(bahanFilter !== 'Kopi' && bahanFilter !== 'Kue') bahanFilter = 'Kopi';
   document.querySelectorAll('#bahanFilter [data-fb]').forEach(x => x.setAttribute('aria-selected', x.dataset.fb === bahanFilter));
   const w = $('tetapWarn'); if(w) w.hidden = tetapReady;
   const body = $('bahanBody');
   const daftar = [...state.bahan];
   if(editB && editB.baru) daftar.push({id: editB.id, ...editB.d});
-  if(!daftar.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada bahan. <button class="btn small" type="button" data-add-b="Kopi">+ Bahan kopi</button> <button class="btn small" type="button" data-add-b="Kue">+ Bahan kue</button>${contohButton()}</td></tr>`; return; }
+  const k = bahanFilter, kata = k.toLowerCase();
   const sortNama = (a,b) => (a.nama||'').localeCompare(b.nama||'','id');
-  const kelompok = KAT_BAHAN.filter(([k]) => bahanFilter === 'semua' || bahanFilter === k);
-  body.innerHTML = kelompok.map(([k, label, dot]) => {
-    const list = daftar.filter(b => (editB && editB.id === b.id ? editB.d.kategori : katBahan(b)) === k).sort(sortNama);
-    if(editB && editB.baru){ const i = list.findIndex(b => b.id === editB.id); if(i > 0) list.unshift(list.splice(i, 1)[0]); }
-    return `<tr class="grp"><td colspan="7"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b><span class="${dot}" style="margin-right:8px"></span>${label} <span class="muted" style="font-weight:400">(${list.filter(b => !(editB && editB.baru && b.id === editB.id)).length})</span></b><button class="btn small" type="button" data-add-b="${k}">+ Tambah</button></div></td></tr>` +
-      (list.length ? list.map(b => editB && editB.id === b.id ? barisEdit(b.id, editB.d) : barisBahan(b)).join('') : `<tr><td colspan="7" class="note" style="padding:10px 6px">Belum ada bahan di kelompok ini.</td></tr>`);
-  }).join('');
+  const list = daftar.filter(b => (editB && editB.id === b.id ? editB.d.kategori : katBahan(b)) === k).sort(sortNama);
+  if(editB && editB.baru){ const i = list.findIndex(b => b.id === editB.id); if(i > 0) list.unshift(list.splice(i, 1)[0]); }
+  const jumlah = list.filter(b => !(editB && editB.baru && b.id === editB.id)).length;
+  body.innerHTML = `<tr class="grp"><td colspan="6"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b>${jumlah} bahan ${kata}</b><button class="btn small" type="button" data-add-b="${k}">+ Tambah bahan ${kata}</button></div></td></tr>` +
+    (list.length ? list.map(b => editB && editB.id === b.id ? barisEdit(b.id, editB.d) : barisBahan(b)).join('')
+      : `<tr><td colspan="6" class="empty">Belum ada bahan ${kata}.${state.bahan.length ? '' : contohButton()}</td></tr>`);
 }
 function barisBahan(b){
   const t = katBahan(b) === 'Kopi' ? tetapDari(b.id) : null;
   return `<tr class="brow">
     <td><b>${esc(b.nama) || '<span class="muted">(tanpa nama)</span>'}</b>${t ? `<div><span class="chip neutral" style="margin-top:4px">Tetap tiap cup · ${num(t.qty).toLocaleString('id-ID')} ${esc(b.satuan)} = ${rp(hargaSatuan(b) * num(t.qty))}</span></div>` : ''}</td>
-    <td data-l="Kelompok">${katBahan(b)}</td>
     <td class="r num" data-l="Harga beli">${rp(b.harga)}</td>
     <td class="r num" data-l="Isi kemasan">${num(b.isi).toLocaleString('id-ID')}</td>
     <td data-l="Satuan">${esc(b.satuan)}</td>
@@ -1627,18 +1625,18 @@ function barisEdit(id, d){
   const kopi = d.kategori === 'Kopi';
   return `<tr class="brow sedang-edit">
     <td><input type="text" id="b-n-${id}" data-bf="nama" value="${esc(d.nama)}" placeholder="mis. Susu UHT" aria-label="Nama bahan"></td>
-    <td data-l="Kelompok"><select data-bf="kategori" aria-label="Kelompok">${['Kopi','Kue'].map(k => `<option ${k===d.kategori?'selected':''}>${k}</option>`).join('')}</select></td>
     <td data-l="Harga beli (Rp)"><input type="text" inputmode="numeric" class="uang" autocomplete="off" data-bf="harga" value="${fmtU(d.harga)}" aria-label="Harga beli"></td>
     <td data-l="Isi kemasan"><input type="number" min="0" step="any" data-bf="isi" value="${d.isi}" aria-label="Isi kemasan"></td>
     <td data-l="Satuan"><select data-bf="satuan" aria-label="Satuan">${['gr','ml','pcs'].map(s=>`<option ${s===d.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
     <td class="r num" data-l="Harga / satuan" id="b-pu">${rp2(hargaSatuan(d))} / ${esc(d.satuan)}</td>
     <td></td></tr>
-  <tr class="edit-bawah"><td colspan="7"><div class="edit-aksi">
+  <tr class="edit-bawah"><td colspan="6"><div class="edit-aksi">
     ${kopi ? `<label class="cek"><input type="checkbox" data-bf="tetap" ${d.tetap ? 'checked' : ''}> Tetap tiap cup</label>
       <label class="field tetap-qty" ${d.tetap ? '' : 'hidden'}><span>Takaran per cup (${esc(d.satuan)})</span><input type="number" min="0" step="any" data-bf="qty" value="${d.qty}" placeholder="kosong = ambil dari resep"></label>
       <span class="note tetap-info" ${d.tetap ? '' : 'hidden'} id="b-tetap-info"></span>` : ''}
     <span style="flex:1"></span>
-    ${editB && !editB.baru ? `<button class="btn ghost" type="button" data-del-b="${id}">Hapus bahan</button>` : ''}
+    ${editB && !editB.baru ? `<button class="link" type="button" data-pindah-b title="Kalau bahan ini salah kelompok">Pindah ke bahan ${kopi ? 'kue' : 'kopi'}</button>
+      <button class="btn ghost" type="button" data-del-b="${id}">Hapus bahan</button>` : ''}
     <button class="btn" type="button" data-batal-b>Batal</button>
     <button class="btn primary" type="button" data-simpan-b>Simpan</button>
   </div><p class="msg err" id="b-err" hidden></p></td></tr>`;
@@ -1660,7 +1658,7 @@ function mulaiEditBahan(id, baru){
   const n = $('b-n-' + editB.id); if(n){ n.focus(); n.scrollIntoView({block:'center'}); }
 }
 function simpanBahan(){
-  const d = editB.d, err = $('b-err');
+  const d = editB.d, err = $('b-err'); err.className = 'msg err';
   if(!(d.nama || '').trim()){ err.textContent = 'Isi nama bahan dulu.'; err.hidden = false; $('b-n-' + editB.id).focus(); return; }
   if(!(num(d.isi) > 0)){ err.textContent = 'Isi kemasan harus lebih dari 0.'; err.hidden = false; return; }
   let b = editB.baru ? null : bahanById(editB.id);
@@ -1699,6 +1697,13 @@ $('bahanBody').addEventListener('click', e => {
   const add = e.target.closest('[data-add-b]'); if(add){ mulaiEditBahan(null, add.dataset.addB); return; }
   const ed = e.target.closest('[data-edit-b]'); if(ed){ mulaiEditBahan(ed.dataset.editB); return; }
   if(e.target.closest('[data-batal-b]')){ editB = null; renderBahan(); return; }
+  if(e.target.closest('[data-pindah-b]') && editB){
+    editB.d.kategori = editB.d.kategori === 'Kopi' ? 'Kue' : 'Kopi';
+    if(editB.d.kategori === 'Kue') editB.d.tetap = false;
+    bahanFilter = editB.d.kategori; renderBahan(); infoTetap();
+    const er = $('b-err'); if(er){ er.className = 'msg info'; er.textContent = `Akan dipindah ke bahan ${editB.d.kategori.toLowerCase()} setelah kamu klik Simpan.`; er.hidden = false; }
+    return;
+  }
   if(e.target.closest('[data-simpan-b]')){ simpanBahan(); return; }
   const t = e.target.closest('[data-del-b]'); if(!t) return;
   const id = t.dataset.delB, b = bahanById(id);
