@@ -106,8 +106,6 @@ input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 .pitem .h{font-size:12px;color:var(--muted);white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--accent);display:inline-block}
 .dot.kue{background:var(--kue)}
-.dot.spesial{background:#b0417a}
-.mbtn.spesial{border-left:4px solid #b0417a}
 .dot.umum{background:var(--muted)}
 .addrow{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 
@@ -394,7 +392,6 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
   .edit-aksi .btn{padding:10px 14px}
   #bahanFilter{width:100%}
   .addrow{display:grid;grid-template-columns:1fr 1fr}
-  .addrow .btn:last-child:nth-child(odd){grid-column:1/-1}
   .addrow .btn{padding:12px}
   /* Pilih menu -> layar detail; tombol kembali ke daftar */
   .grid>aside{display:block}
@@ -496,7 +493,6 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
           <div class="addrow">
             <button class="btn" type="button" data-add="Kopi">+ Menu kopi</button>
             <button class="btn" type="button" data-add="Kue">+ Menu kue</button>
-            <button class="btn" type="button" data-add="Spesial">+ Menu spesial</button>
           </div>
         </aside>
         <div class="detail"><button class="btn back-hp" type="button" data-kembali>‹ Semua menu</button><div id="editor"></div></div>
@@ -585,11 +581,10 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
           <div class="panel card">
             <div class="sub">
               <h2>Pilih menu</h2>
-              <div class="seg wrap" id="kFilter" style="min-width:280px">
+              <div class="seg" id="kFilter" style="min-width:220px">
                 <button type="button" data-kf="" aria-selected="true">Semua</button>
                 <button type="button" data-kf="Kopi" aria-selected="false">Kopi</button>
                 <button type="button" data-kf="Kue" aria-selected="false">Kue</button>
-                <button type="button" data-kf="Spesial" aria-selected="false">Spesial</button>
               </div>
             </div>
             <div class="field" id="kSaluranBox"><span>Saluran</span><div class="seg wrap" id="kSaluran"></div></div>
@@ -1145,19 +1140,18 @@ document.addEventListener('visibilitychange', () => {
 const bahanById = id => state.bahan.find(b => b.id === id);
 const hargaSatuan = b => b && num(b.isi) > 0 ? num(b.harga)/num(b.isi) : 0;
 const bulat = (n, step=500) => Math.ceil(n/step)*step;
-const unitOf = p => p.kategori === 'Kopi' ? 'cup' : p.kategori === 'Spesial' ? 'porsi' : (num(p.potong) > 1 ? 'potong' : 'pcs');
-const pakaiTetap = p => p.kategori === 'Kopi' || p.kategori === 'Spesial';
+const unitOf = p => p.kategori === 'Kopi' ? 'cup' : (num(p.potong) > 1 ? 'potong' : 'pcs');
 
 function hitung(p){
   const hasil = p.kategori === 'Kopi' ? 1 : Math.max(num(p.hasil),1);
-  const potong = p.kategori === 'Kue' ? Math.max(num(p.potong),1) : 1;
+  const potong = p.kategori === 'Kopi' ? 1 : Math.max(num(p.potong),1);
   const porsi = hasil*potong;
   const baris = p.items.map(i => { const b = bahanById(i.bahanId); return {b, biaya: hargaSatuan(b)*num(i.qty)*(i.per==='porsi'?porsi:1)}; });
   const totalBahan = baris.reduce((s,x)=>s+x.biaya,0);
   const totalLain = p.lain.reduce((s,x)=>s+num(x.nilai),0);
   // Bahan tetap per cup (dicentang di tab Bahan Baku) — hanya menu kopi, bisa dimatikan per menu
   // (kalau bahan itu juga ada di resep ini, biaya tetapnya dilewati supaya tidak dihitung dua kali)
-  const tetapDipakai = pakaiTetap(p) ? tetapList().filter(t => !(p.tetapOff || []).includes(t.id)
+  const tetapDipakai = p.kategori === 'Kopi' ? tetapList().filter(t => !(p.tetapOff || []).includes(t.id)
     && !p.items.some(i => i.bahanId === t.bahanId)) : [];
   const tetapPerPorsi = tetapDipakai.reduce((s,t) => s + num(t.biaya), 0);
   const totalTetap = tetapPerPorsi * porsi;
@@ -1180,7 +1174,7 @@ function hitung(p){
 function status(p, h){
   if(h.jual <= 0) return {cls:'warn', t:'Harga jual belum diisi'};
   if(h.laba < 0) return {cls:'bad', t:'Rugi'};
-  const batas = p.kategori === 'Kopi' ? [0.35,0.45] : [0.40,0.50];
+  const batas = p.kategori === 'Kue' ? [0.40,0.50] : [0.35,0.45];
   if(h.fc <= batas[0]) return {cls:'good', t:'Sehat'};
   if(h.fc <= batas[1]) return {cls:'warn', t:'Margin tipis'};
   return {cls:'bad', t:'Food cost tinggi'};
@@ -1362,15 +1356,14 @@ document.addEventListener('click', e => {
 
 function renderList(){
   let html = '';
-  ['Kopi','Kue','Spesial'].forEach(k => {
+  ['Kopi','Kue'].forEach(k => {
     const ps = state.produk.filter(p => p.kategori === k);
-    if(k === 'Spesial' && !ps.length) return;
     html += `<div class="label cat">${k}</div>`;
     if(!ps.length) html += `<div class="note" style="padding:4px 12px">Belum ada menu ${k.toLowerCase()}.</div>`;
     ps.forEach(p => {
       const h = hitung(p), rugi = !h.varian.length && h.jual > 0 && h.laba < 0;
       html += `<button type="button" class="pitem${rugi ? ' rugi' : ''}" data-sel="${p.id}" aria-current="${p.id===sel}">
-        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':k==='Spesial'?'spesial':''}"></span><span class="n">${esc(p.nama)||'Tanpa nama'}</span></span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':''}"></span><span class="n">${esc(p.nama)||'Tanpa nama'}</span></span>
         <span><span class="h num">${pendingMenu.has(p.id) ? `<span class="chip warn" style="padding:1px 7px">${saved.menu.has(p.id) ? 'Diubah' : 'Draf'}</span>` : 'HPP ' + hppLabel(h)}</span>
         <span class="j num">${h.varian.length ? h.varian.length + ' varian' : rugi ? 'Rugi · jual ' + rp(h.jual) : h.jual > 0 ? 'Jual ' + rp(h.jual) : 'Harga jual belum diisi'}</span></span></button>`;
     });
@@ -1380,9 +1373,7 @@ function renderList(){
 $('plist').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if(!b) return; sel = b.dataset.sel; renderList(); renderEditor(); lihatDetail(true); });
 document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
   const k = btn.dataset.add;
-  const p = {id:uid(),nama:k==='Kopi'?'Menu kopi baru':k==='Spesial'?'Menu spesial baru':'Menu kue baru',kategori:k,hasil:1,potong:k==='Kue'?12:1,margin:55,hargaJual:0,items:[],lain:[],varian:[],
-    // menu spesial: cup & es batu tidak otomatis, centang sendiri kalau dipakai
-    tetapOff: k === 'Spesial' ? biayaTetap.map(t => t.id) : [], web: {tampil:false, halaman: k === 'Spesial' ? 'spesial' : ''}};
+  const p = {id:uid(),nama:k==='Kopi'?'Menu kopi baru':'Menu kue baru',kategori:k,hasil:1,potong:k==='Kopi'?1:12,margin:55,hargaJual:0,items:[],lain:[],varian:[]};
   state.produk.push(p); sel = p.id; pendingMenu.add(p.id); renderList(); renderEditor(); lihatDetail(true);
   const n = $('pNama'); if(n){ n.focus(); n.select(); }
 }));
@@ -1407,14 +1398,6 @@ function bahanOptions(selId, list, pref){
   const kat = b => b.kategori === 'Kue' ? 'Kue' : 'Kopi';
   const label = {Kopi:'☕ Bahan kopi', Kue:'🍰 Bahan kue'};
   const opt = b => `<option value="${b.id}" ${b.id===selId?'selected':''}>${esc(b.nama)||'(tanpa nama)'}</option>`;
-  // Menu spesial: bahan kopi dan bahan kue sama-sama boleh dipakai (bahan tetap tetap lewat centang)
-  if(pref === 'Spesial'){
-    const opsi = sorted.filter(b => !(kat(b) === 'Kopi' && tetapDari(b.id) && b.id !== selId));
-    return `<option value="">${opsi.length ? 'Pilih bahan kopi atau kue…' : 'Belum ada bahan — tambah di tab Bahan Baku'}</option>` + ['Kopi','Kue'].map(k => {
-      const xs = opsi.filter(b => kat(b) === k);
-      return xs.length ? `<optgroup label="${label[k]}">${xs.map(opt).join('')}</optgroup>` : '';
-    }).join('');
-  }
   if(pref === 'Kopi' || pref === 'Kue'){
     // Bahan tetap (cup, es batu, …) tidak dipilih di resep kopi — sudah otomatis
     const milik = sorted.filter(b => kat(b) === pref && !(pref === 'Kopi' && tetapDari(b.id) && b.id !== selId));
@@ -1430,7 +1413,7 @@ function bahanOptions(selId, list, pref){
 // Tampilan di web menu pelanggan (pesan online)
 const HALAMAN_WEB = [['kopi','Kopi'],['lainnya','Bukan kopi'],['kue','Kue & roti'],['spesial','Spesial bulan ini']];
 function webSection(p){
-  const w = p.web || {}, hal = w.halaman || (p.kategori === 'Kue' ? 'kue' : p.kategori === 'Spesial' ? 'spesial' : 'kopi');
+  const w = p.web || {}, hal = w.halaman || (p.kategori === 'Kue' ? 'kue' : 'kopi');
   return `<details class="web-box" ${w.tampil ? 'open' : ''}>
     <summary><label class="cek" style="min-height:0"><input type="checkbox" data-w="tampil" ${w.tampil ? 'checked' : ''}> Tampil di web menu pelanggan</label>
       <span class="note">${w.tampil ? 'Pelanggan bisa melihat dan memesan menu ini' : 'Tidak tampil di web menu'}</span></summary>
@@ -1497,18 +1480,9 @@ function renderEditor(){
   const el = $('editor');
   const p = state.produk.find(x => x.id === sel);
   if(!p){ el.innerHTML = `<div class="panel empty">Belum ada menu. Tambahkan menu kopi atau kue dari daftar di kiri.${contohButton()}</div>`; return; }
-  const kue = p.kategori === 'Kue', sp = p.kategori === 'Spesial', perResep = kue || sp;
-  const resepKata = kue ? 'adonan' : sp ? 'resep' : 'cup';
-  const yieldBox = sp ? `
-      <div class="yield">
-        <h3>Hasil dari 1 resep</h3>
-        <div class="yield-row" style="grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)">
-          <label class="field"><span>1 resep jadi berapa porsi?</span><input type="number" min="1" step="1" id="pHasil" data-p="hasil" value="${p.hasil}"></label>
-          <span class="x">=</span>
-          <div class="field"><span>Total yang dijual</span><div class="yield-total num" id="yieldTotal"></div></div>
-        </div>
-        <p class="note">Menu spesial boleh memakai bahan kopi dan bahan kue sekaligus. Minuman spesial per gelas: isi <b>1</b>. Kue spesial 1 resep jadi 8 potong: isi <b>8</b>.</p>
-      </div>` : kue ? `
+  const kue = p.kategori === 'Kue';
+  const resepKata = kue ? 'adonan' : 'cup';
+  const yieldBox = kue ? `
       <div class="yield">
         <h3>Hasil dari 1 adonan</h3>
         <div class="yield-row">
@@ -1532,27 +1506,25 @@ function renderEditor(){
       </div>
       <div class="row3">
         <label class="field"><span>Nama menu</span><input type="text" id="pNama" data-p="nama" value="${esc(p.nama)}"></label>
-        <label class="field"><span>Kategori</span><select id="pKat" data-p="kategori">${['Kopi','Kue','Spesial'].map(k => `<option ${p.kategori===k?'selected':''}>${k}</option>`).join('')}</select></label>
+        <label class="field"><span>Kategori</span><select id="pKat" data-p="kategori"><option ${!kue?'selected':''}>Kopi</option><option ${kue?'selected':''}>Kue</option></select></label>
       </div>
       ${yieldBox}
 
       <div>
         <div class="sub" style="margin-bottom:6px"><h3>Bahan untuk 1 ${resepKata}</h3><button class="btn" type="button" id="addItem">+ Bahan</button></div>
         <div class="tbl-wrap"><table class="items">
-          <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th>${perResep ? '<th>Dihitung</th>' : ''}<th class="r">Biaya</th><th></th></tr></thead>
+          <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th>${kue ? '<th>Dihitung</th>' : ''}<th class="r">Biaya</th><th></th></tr></thead>
           <tbody>${p.items.length ? p.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
             <td><select id="it-b-${ix}" data-item="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
             <td><input type="number" min="0" step="any" id="it-q-${ix}" data-item="${ix}" data-f="qty" value="${vN(i.qty)}" placeholder="0"></td>
             <td>${b?esc(b.satuan):''}</td>
-            ${perResep ? `<td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per ${resepKata}</option><option value="porsi" ${i.per==='porsi'?'selected':''}>${sp ? 'per porsi' : 'per potong/pcs'}</option></select></td>` : ''}
+            ${kue ? `<td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per adonan</option><option value="porsi" ${i.per==='porsi'?'selected':''}>per potong/pcs</option></select></td>` : ''}
             <td class="r num" data-cost="${ix}"></td>
             <td><button class="btn ghost" type="button" title="Hapus bahan" aria-label="Hapus bahan" data-del-item="${ix}">✕</button></td></tr>`; }).join('')
-            : `<tr><td colspan="${perResep?6:5}" class="muted" style="padding:14px 6px">Belum ada bahan. Klik “+ Bahan” lalu pilih dari daftar bahan baku.</td></tr>`}
+            : `<tr><td colspan="${kue?6:5}" class="muted" style="padding:14px 6px">Belum ada bahan. Klik “+ Bahan” lalu pilih dari daftar bahan baku.</td></tr>`}
           </tbody>
         </table></div>
-        <p class="note" style="margin-top:6px">${sp
-          ? 'Pilih dari bahan kopi maupun bahan kue. Tulis takaran untuk 1 resep; kemasan (mika, kotak, sedotan) pilih “per porsi” dan isi 1. Cup + tutup dan es batu cukup dicentang di bagian Biaya tetap di bawah.'
-          : kue
+        <p class="note" style="margin-top:6px">${kue
           ? 'Tulis takaran untuk seluruh adonan. Kemasan seperti mika atau plastik pilih “per potong/pcs” dan isi 1.'
           : 'Tulis takaran untuk 1 cup, misalnya espresso 18 gr, susu 150 ml. Cup dan es batu sudah otomatis dari biaya tetap.'} Bahan belum ada? Tambahkan dulu di tab <b>Bahan Baku</b>.</p>
       </div>
@@ -1618,7 +1590,7 @@ function updateComputed(){
         <div class="legend">
           <div><span><i style="background:var(--accent)"></i>Bahan & kemasan</span><span class="num">${rp(perBahan)}</span></div>
           <div><span><i style="background:var(--kue)"></i>Biaya lain</span><span class="num">${rp(perLain)}</span></div>
-          ${pakaiTetap(p) ? `<div><span><i style="background:var(--muted)"></i>Biaya tetap (${h.tetapDipakai.map(t => esc(t.nama)).join(', ') || 'tidak ada'})</span><span class="num">${rp(perTetap)}</span></div>` : ''}
+          ${p.kategori === 'Kopi' ? `<div><span><i style="background:var(--muted)"></i>Biaya tetap (${h.tetapDipakai.map(t => esc(t.nama)).join(', ') || 'tidak ada'})</span><span class="num">${rp(perTetap)}</span></div>` : ''}
         </div>
       </div>
       ${h.varian.length ? varianResult(p,h) : `<div class="suggest">
@@ -1647,10 +1619,7 @@ editorEl.addEventListener('input', e => {
     if(k === 'tampil'){ const d = t.closest('details'); if(d){ d.open = t.checked; d.querySelector('summary .note').textContent = t.checked ? 'Pelanggan bisa melihat dan memesan menu ini' : 'Tidak tampil di web menu'; } }
     return; }
   if(t.dataset.tetap!=null){ p.tetapOff = (p.tetapOff||[]).filter(x => x !== t.dataset.tetap); if(!t.checked) p.tetapOff.push(t.dataset.tetap); tandaiMenu(p); }
-  else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){
-      if(p.kategori==='Kopi') jadikanPerCup(p);
-      if(p.kategori==='Spesial'){ p.hasil = Math.max(num(p.hasil),1) * Math.max(num(p.potong),1); p.potong = 1; if(!p.web || !p.web.halaman || p.web.halaman === 'kue' || p.web.halaman === 'kopi') p.web = Object.assign({}, p.web, {halaman:'spesial'}); }
-      renderList(); renderEditor(); return; } }
+  else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ if(p.kategori==='Kopi') jadikanPerCup(p); renderList(); renderEditor(); return; } }
   else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
   else if(t.dataset.vf){ const v = p.varian[+t.dataset.v]; v[t.dataset.vf] = t.dataset.vf==='nama' ? t.value : num(t.value); tandaiMenu(p); }
   else if(t.dataset.item!=null){ const i = p.items[+t.dataset.item]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
@@ -1906,7 +1875,7 @@ function renderSummary(){
   const body = $('sumBody');
   if(!state.produk.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada menu.</td></tr>`; return; }
   const row = (p, nama, h) => { const st = status(p,h); return `<tr>
-    <td><b>${nama}</b></td><td><span class="dot ${p.kategori==='Kue'?'kue':p.kategori==='Spesial'?'spesial':''}" style="margin-right:6px"></span>${p.kategori}</td>
+    <td><b>${nama}</b></td><td><span class="dot ${p.kategori==='Kue'?'kue':''}" style="margin-right:6px"></span>${p.kategori}</td>
     <td class="r num">${rp(h.hpp)}</td><td class="r num">${h.jual>0?rp(h.jual):'–'}</td>
     <td class="r num" style="color:${h.laba<0&&h.jual>0?'var(--bad)':'inherit'}">${h.jual>0?rp(h.laba):'–'}</td>
     <td class="r num">${h.jual>0?pct(h.fc):'–'}</td><td><span class="chip ${st.cls}">${st.t}</span></td></tr>`; };
@@ -1930,13 +1899,13 @@ async function loadStaff(){
 }
 function renderResepList(){
   let html = '';
-  ['Kopi','Kue','Spesial'].forEach(k => {
+  ['Kopi','Kue'].forEach(k => {
     const ms = staff.menu.filter(x => x.kategori === k);
     if(!ms.length) return;
     html += `<div class="label cat">${k}</div>`;
     ms.forEach(x => {
       html += `<button type="button" class="pitem" data-rsel="${x.id}" aria-current="${x.id===rsel}">
-        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':k==='Spesial'?'spesial':''}"></span><span class="n">${esc(x.nama)}</span></span></button>`;
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot ${k==='Kue'?'kue':''}"></span><span class="n">${esc(x.nama)}</span></span></button>`;
     });
   });
   $('rlist').innerHTML = html || `<p class="note" style="padding:4px 12px">Belum ada menu.</p>`;
@@ -1946,24 +1915,22 @@ function renderResep(){
   const el = $('resepDetail'); let x = staff.menu.find(m => m.id === rsel);
   if(!x){ el.innerHTML = `<div class="panel empty">Belum ada menu dari pemilik.</div>`; return; }
   const bn = id => staff.bahan.find(b => b.id === id);
-  const kue = x.kategori === 'Kue', sp = x.kategori === 'Spesial', potong = kue ? (num(x.potong) || 1) : 1;
+  const kue = x.kategori === 'Kue', potong = kue ? (num(x.potong) || 1) : 1;
   // Kopi: tampilkan takaran per 1 cup (resep lama "1 resep = N cup" dibagi N)
-  const hasilAsli = num(x.hasil) || 1, hasil = (kue || sp) ? hasilAsli : 1;
-  if(!kue && !sp && hasilAsli > 1) x = {...x, items: (x.items || []).map(i => i.per === 'porsi' ? i : {...i, qty: bulat2(num(i.qty) / hasilAsli)})};
-  const unit = kue ? (potong > 1 ? 'potong' : 'pcs') : sp ? 'porsi' : 'cup';
-  const wadahKata = kue ? 'adonan' : sp ? 'resep' : 'cup';
+  const hasilAsli = num(x.hasil) || 1, hasil = kue ? hasilAsli : 1;
+  if(!kue && hasilAsli > 1) x = {...x, items: (x.items || []).map(i => i.per === 'porsi' ? i : {...i, qty: bulat2(num(i.qty) / hasilAsli)})};
+  const unit = kue ? (potong > 1 ? 'potong' : 'pcs') : 'cup';
   const tabel = (items, perResepLabel, perPcsLabel) => items.length ? `<div class="tbl-wrap"><table>
       <thead><tr><th>Bahan</th><th class="r">Takaran</th><th>Satuan</th><th>Keterangan</th></tr></thead>
       <tbody>${items.map(i => { const b = bn(i.bahanId); return `<tr><td>${b ? esc(b.nama) : '<span class="muted">(bahan dihapus)</span>'}</td><td class="r num">${num(i.qty).toLocaleString('id-ID')}</td><td>${b ? esc(b.satuan) : ''}</td><td class="muted">${i.per === 'porsi' ? perPcsLabel : perResepLabel}</td></tr>`; }).join('')}</tbody>
     </table></div>` : `<p class="note">Belum ada bahan.</p>`;
-  const hasilTeks = kue ? (potong > 1 ? `1 adonan = ${hasil} loyang × ${potong} potong = <b>${hasil*potong} potong</b>` : `1 adonan = <b>${hasil} pcs</b>`)
-    : sp ? `1 resep = <b>${hasil} porsi</b>` : `Takaran untuk <b>1 cup</b>`;
+  const hasilTeks = kue ? (potong > 1 ? `1 adonan = ${hasil} loyang × ${potong} potong = <b>${hasil*potong} potong</b>` : `1 adonan = <b>${hasil} pcs</b>`) : `Takaran untuk <b>1 cup</b>`;
   const hargaUtama = x.varian.length ? '' : `<div class="kv"><span>Harga jual per ${unit}</span><b class="big-price num">${num(x.harga_jual) > 0 ? rp(x.harga_jual) : '–'}</b></div>`;
   el.innerHTML = `<div class="panel card">
     <div class="sub"><h2>${esc(x.nama)}</h2><span class="chip neutral">${x.kategori}</span></div>
     <p class="note" style="font-size:13px;color:var(--fg)">${hasilTeks}</p>
     ${hargaUtama}
-    <div><h3 style="margin-bottom:6px">Bahan untuk 1 ${wadahKata}</h3>${tabel(x.items, 'untuk 1 ' + wadahKata, 'per ' + unit)}</div>
+    <div><h3 style="margin-bottom:6px">Bahan untuk 1 ${kue ? 'adonan' : 'cup'}</h3>${tabel(x.items, 'untuk 1 ' + (kue ? 'adonan' : 'cup'), 'per ' + unit)}</div>
     ${x.varian.length ? `<div class="var-wrap"><h3>Varian</h3>${x.varian.map((v,vx) => `<div class="var-card">
       <div class="sub"><b>${esc(v.nama) || 'Varian ' + (vx+1)} <span class="muted" style="font-weight:400">· ${num(v.jumlah)} pcs</span></b><b class="num">${num(v.hargaJual) > 0 ? rp(v.hargaJual) + ' / pcs' : '–'}</b></div>
       ${tabel((v.items || []).map(i => ({...i, per: i.per === 'resep' ? 'resep' : 'porsi'})), 'total untuk varian ini', 'per pcs')}
@@ -2137,7 +2104,7 @@ function renderSaluran(){
 function renderGrid(){
   const s = salCur(), list = jual.filter(j => !kFilter || j.kategori === kFilter);
   $('menuGrid').innerHTML = list.length ? list.map(j => { const q = cart.get(j.kunci) || 0, ok = +j.harga > 0, ada = stokMap.has(j.kunci), sisa = stokSisa(j.kunci); return `
-    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':j.kategori==='Spesial'?'spesial':'kopi'}" data-k="${esc(j.kunci)}" ${!ok ? 'disabled title="Harga belum diisi pemilik"' : sisa <= 0 ? `disabled title="${q ? 'Stok sudah di keranjang semua' : 'Stok habis'}"` : ''}>
+    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${!ok ? 'disabled title="Harga belum diisi pemilik"' : sisa <= 0 ? `disabled title="${q ? 'Stok sudah di keranjang semua' : 'Stok habis'}"` : ''}>
       ${q ? `<span class="q">${q}</span>` : ''}
       <span class="n">${esc(j.nama)}</span><span class="p num">${ok ? rp(hargaSal(j.harga, s)) : 'Harga belum diisi'}</span>
       ${ada ? `<span class="stok ${sisa <= 0 ? 'nol' : ''}">${stokMap.get(j.kunci) === 0 ? 'Habis' : 'Sisa ' + Math.max(sisa, 0)}</span>` : ''}
@@ -2269,7 +2236,7 @@ function renderPesanan(){
   // Stok terbatas: kue dulu, lalu yang sudah punya stok
   const fokus = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.stok;
   if(!fokus){
-    const urutStok = [...jual].sort((a,b) => (stokMap.has(b.kunci) - stokMap.has(a.kunci)) || ((a.kategori === 'Kopi' ? 1 : 0) - (b.kategori === 'Kopi' ? 1 : 0)) || a.nama.localeCompare(b.nama, 'id'));
+    const urutStok = [...jual].sort((a,b) => (stokMap.has(b.kunci) - stokMap.has(a.kunci)) || ((a.kategori === 'Kue' ? 0 : 1) - (b.kategori === 'Kue' ? 0 : 1)) || a.nama.localeCompare(b.nama, 'id'));
     $('stokList').innerHTML = urutStok.length ? urutStok.map(j => { const ada = stokMap.has(j.kunci), on = dipesanOnline(j.kunci); return `<label class="stok-row">
       <span><span class="n">${esc(j.nama)}</span>${ada ? `<div class="s">${stokMap.get(j.kunci) === 0 ? 'Habis' : 'Sisa ' + stokMap.get(j.kunci)}${on ? ` · ${on} dipesan online` : ''}</div>` : ''}</span>
       <input type="number" min="0" step="1" inputmode="numeric" data-stok="${esc(j.kunci)}" value="${ada ? stokMap.get(j.kunci) : ''}" placeholder="bebas" aria-label="Stok ${esc(j.nama)}"></label>`; }).join('') : '<span class="note">Menu belum dimuat.</span>';
