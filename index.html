@@ -138,6 +138,12 @@ tbody tr:last-child td{border-bottom:0}
 .psn-items{margin:0;padding-left:18px}
 .psn-aksi{display:flex;flex-wrap:wrap;gap:6px}
 .psn-aksi .btn{padding:9px 14px}
+.stok-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 14px}
+.stok-row{display:grid;grid-template-columns:minmax(0,1fr) 90px;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.stok-row .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stok-row .s{font-size:11px;color:var(--muted)}
+.mbtn .stok{font-size:11px;font-weight:600;color:var(--warn)}
+.mbtn .stok.nol{color:var(--bad)}
 .habis-list{display:flex;flex-wrap:wrap;gap:6px}
 .habis-list button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;cursor:pointer;font-weight:500}
 .habis-list button[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad);border-color:transparent;text-decoration:line-through}
@@ -560,9 +566,14 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
             <div class="toko-ctl" id="tokoCtl"></div>
           </div>
           <div id="pesananList"></div>
+          <details class="extra" id="stokBox">
+            <summary>Stok terbatas (kue, menu spesial)</summary>
+            <p class="note">Isi jumlah yang tersedia, misalnya 12 roti. Setiap penjualan di kasir mengurangi stok otomatis. Kalau sisanya 0, menu itu “Habis” di web dan di kasir. Kosongkan = tidak dibatasi.</p>
+            <div class="stok-list" id="stokList"></div>
+          </details>
           <details class="extra" id="habisBox">
             <summary>Menu habis hari ini</summary>
-            <p class="note">Ketuk menu yang habis. Di web menu tampil “Habis hari ini” dan tidak bisa dipesan. Besok otomatis tersedia lagi.</p>
+            <p class="note">Untuk menu tanpa stok (mis. kopi): ketuk yang habis. Di web menu tampil “Habis hari ini” dan tidak bisa dipesan. Besok otomatis tersedia lagi.</p>
             <div class="habis-list" id="habisList"></div>
           </details>
         </div>
@@ -1397,6 +1408,7 @@ function webSection(p){
       <label class="field"><span>&nbsp;</span><label class="cek"><input type="checkbox" data-w="andalan" ${w.andalan ? 'checked' : ''}> Andalan</label></label>
     </div>
     <label class="field"><span>Keterangan singkat untuk pelanggan</span><input type="text" data-w="ket" value="${esc(w.ket || '')}" maxlength="120" placeholder="mis. Espresso, susu segar, dan gula aren cair"></label>
+    <label class="field"><span>Nama file foto (di folder Foto pada repo web menu, boleh kosong)</span><input type="text" data-w="foto" value="${esc(w.foto || '')}" maxlength="120" placeholder="mis. es-kopi-susu-gula-aren.webp"></label>
     <p class="note">Harga di web menu memakai harga jual di atas${p.varian.length ? ' (setiap varian tampil sebagai menu sendiri)' : ''}. Klik <b>Simpan menu</b> supaya perubahan tampil di web.</p>
   </details>`;
 }
@@ -1823,13 +1835,13 @@ $('imporSheet').addEventListener('click', async () => {
     const ya = v => /^(true|ya|y|x|1|v|✓)$/i.test((v || '').trim());
     const halamanDari = v => { v = (v || '').trim().toLowerCase(); return v.startsWith('kue') || v.startsWith('roti') ? 'kue' : v.startsWith('spesial') ? 'spesial' : v.startsWith('kopi') ? 'kopi' : 'lainnya'; };
     const data = rows.slice(1).filter(c => (c[ix('halaman')] || '').trim().toLowerCase() !== 'status').map((c, i) => ({halaman: halamanDari(c[ix('halaman')]), kelompok: (c[ix('kategori')] || '').trim(), nama: (c[ix('nama')] || '').trim(),
-      harga: parseInt((c[ix('harga')] || '').replace(/\D/g, ''), 10) || 0, ket: (c[ix('keterangan')] || '').trim(), andalan: ya(c[ix('andalan')]), urut: i + 1}))
+      harga: parseInt((c[ix('harga')] || '').replace(/\D/g, ''), 10) || 0, ket: (c[ix('keterangan')] || '').trim(), andalan: ya(c[ix('andalan')]), foto: ix('foto') >= 0 ? (c[ix('foto')] || '').trim() : '', urut: i + 1}))
       .filter(m => m.nama && m.harga);
     const cocok = [], tidak = [], beda = [];
     data.forEach(m => {
       const p = state.produk.find(x => normNama(x.nama) === normNama(m.nama));
       if(!p){ tidak.push(m.nama); return; }
-      p.web = Object.assign({}, p.web, {tampil: true, halaman: m.halaman, kelompok: m.kelompok, ket: m.ket, andalan: m.andalan, urut: m.urut});
+      p.web = Object.assign({}, p.web, {tampil: true, halaman: m.halaman, kelompok: m.kelompok, ket: m.ket, andalan: m.andalan, urut: m.urut}, m.foto ? {foto: m.foto} : {});
       cocok.push(p.nama);
       if(!p.varian.length && num(p.hargaJual) && num(p.hargaJual) !== m.harga) beda.push(`${p.nama} (Sheets ${rp(m.harga)}, HPP ${rp(p.hargaJual)})`);
     });
@@ -2077,10 +2089,11 @@ function renderSaluran(){
 }
 function renderGrid(){
   const s = salCur(), list = jual.filter(j => !kFilter || j.kategori === kFilter);
-  $('menuGrid').innerHTML = list.length ? list.map(j => { const q = cart.get(j.kunci) || 0, ok = +j.harga > 0; return `
-    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${ok?'':'disabled title="Harga belum diisi pemilik"'}>
+  $('menuGrid').innerHTML = list.length ? list.map(j => { const q = cart.get(j.kunci) || 0, ok = +j.harga > 0, ada = stokMap.has(j.kunci), sisa = stokSisa(j.kunci); return `
+    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${!ok ? 'disabled title="Harga belum diisi pemilik"' : sisa <= 0 ? `disabled title="${q ? 'Stok sudah di keranjang semua' : 'Stok habis'}"` : ''}>
       ${q ? `<span class="q">${q}</span>` : ''}
       <span class="n">${esc(j.nama)}</span><span class="p num">${ok ? rp(hargaSal(j.harga, s)) : 'Harga belum diisi'}</span>
+      ${ada ? `<span class="stok ${sisa <= 0 ? 'nol' : ''}">${stokMap.get(j.kunci) === 0 ? 'Habis' : 'Sisa ' + Math.max(sisa, 0)}</span>` : ''}
     </button>`; }).join('')
     : `<p class="note">Belum ada menu yang bisa dijual. ${me && me.role === 'owner' ? 'Isi harga jual di tab Menu & HPP.' : 'Minta pemilik mengisi menu dan harga jual.'}</p>`;
 }
@@ -2128,12 +2141,13 @@ function updateKembali(total){
 const pilihSeg = (box, b) => box.querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', x === b));
 $('menuGrid').addEventListener('click', e => {
   const b = e.target.closest('[data-k]'); if(!b || b.disabled) return;
+  if(stokSisa(b.dataset.k) <= 0){ toast('Stok menu ini sudah habis', 'err'); return; }
   cart.set(b.dataset.k, (cart.get(b.dataset.k) || 0) + 1);
   msg($('kMsg'), 'info', ''); renderGrid(); renderCart();
 });
 $('cartList').addEventListener('click', e => {
   const inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]');
-  if(inc) cart.set(inc.dataset.inc, cart.get(inc.dataset.inc) + 1);
+  if(inc){ if(stokSisa(inc.dataset.inc) <= 0){ toast('Stok menu ini tinggal ' + stokMap.get(inc.dataset.inc), 'err'); return; } cart.set(inc.dataset.inc, cart.get(inc.dataset.inc) + 1); }
   else if(dec){ const q = cart.get(dec.dataset.dec) - 1; if(q > 0) cart.set(dec.dataset.dec, q); else cart.delete(dec.dataset.dec); }
   else return;
   renderGrid(); renderCart();
@@ -2148,6 +2162,9 @@ $('kReload').addEventListener('click', () => { loadJual(); loadSaya(); refreshSh
 
 /* ---------- Pesanan online dari web menu pelanggan ---------- */
 let pesanan = [], pesananReady = true, pesananAktif = null, pesananTimer = null, sudahBunyi = new Set(), tokoStatus = null, habisSet = new Set();
+let stokMap = new Map();   // kunci -> sisa (yang tidak ada di sini = tidak dibatasi)
+const stokSisa = k => stokMap.has(k) ? stokMap.get(k) - (cart.get(k) || 0) : Infinity;
+const dipesanOnline = k => pesanan.reduce((a, p) => a + (p.items || []).filter(i => i.kunci === k).reduce((s, i) => s + i.qty, 0), 0);
 const hariIni = () => new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Makassar'}).format(new Date());
 function bunyi(){
   try {
@@ -2160,13 +2177,15 @@ function bunyi(){
 }
 async function loadPesanan(){
   if(!me || !pesananReady || !navigator.onLine) return;
-  const [p, t, h] = await Promise.all([
+  const [p, t, h, st] = await Promise.all([
     sb.from('pesanan').select('*').in('status', ['menunggu','diterima','siap']).order('created_at'),
     sb.from('status_toko').select('*').eq('id', 1).maybeSingle(),
     sb.from('menu_habis').select('kunci,tanggal'),
+    sb.from('stok_menu').select('kunci,sisa'),
   ]);
   if(p.error){ if(/pesanan|relation|schema cache|does not exist/i.test(p.error.message || '')){ pesananReady = false; $('pesananPanel').hidden = true; } return; }
   pesanan = p.data || []; tokoStatus = t.data || null;
+  if(!st.error){ const lama = JSON.stringify([...stokMap]); stokMap = new Map((st.data || []).map(x => [x.kunci, x.sisa])); if(lama !== JSON.stringify([...stokMap]) && currentTab === 'kasir') renderGrid(); }
   habisSet = new Set((h.data || []).filter(x => x.tanggal === hariIni()).map(x => x.kunci));
   const baru = pesanan.filter(x => x.status === 'menunggu' && !sudahBunyi.has(x.id));
   if(baru.length && sudahBunyi.size + baru.length > 0 && loadPesanan.pernah){ bunyi(); toast(`🔔 Pesanan online baru: ${baru.map(x => x.kode + ' ' + x.nama).join(', ')}`, 'info'); }
@@ -2200,6 +2219,14 @@ function renderPesanan(){
         : `${x.status === 'diterima' ? `<button class="btn" type="button" data-psn="siap" data-id="${x.id}">Tandai siap</button>` : ''}<button class="btn primary" type="button" data-psn="bayar" data-id="${x.id}">Bayar di kasir</button><button class="btn ghost" type="button" data-psn="lunas" data-id="${x.id}" title="Kalau transaksinya sudah dicatat di kasir">Sudah dibayar</button><button class="btn ghost" type="button" data-psn="batal" data-id="${x.id}">Batalkan</button>`}
       </div></div>`).join('')
     : `<p class="note" style="margin-top:8px">Belum ada pesanan online yang aktif.</p>`;
+  // Stok terbatas: kue dulu, lalu yang sudah punya stok
+  const fokus = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.stok;
+  if(!fokus){
+    const urutStok = [...jual].sort((a,b) => (stokMap.has(b.kunci) - stokMap.has(a.kunci)) || ((a.kategori === 'Kue' ? 0 : 1) - (b.kategori === 'Kue' ? 0 : 1)) || a.nama.localeCompare(b.nama, 'id'));
+    $('stokList').innerHTML = urutStok.length ? urutStok.map(j => { const ada = stokMap.has(j.kunci), on = dipesanOnline(j.kunci); return `<label class="stok-row">
+      <span><span class="n">${esc(j.nama)}</span>${ada ? `<div class="s">${stokMap.get(j.kunci) === 0 ? 'Habis' : 'Sisa ' + stokMap.get(j.kunci)}${on ? ` · ${on} dipesan online` : ''}</div>` : ''}</span>
+      <input type="number" min="0" step="1" inputmode="numeric" data-stok="${esc(j.kunci)}" value="${ada ? stokMap.get(j.kunci) : ''}" placeholder="bebas" aria-label="Stok ${esc(j.nama)}"></label>`; }).join('') : '<span class="note">Menu belum dimuat.</span>';
+  }
   // Menu habis
   $('habisList').innerHTML = jual.length ? jual.map(j => `<button type="button" data-habis="${esc(j.kunci)}" aria-pressed="${habisSet.has(j.kunci)}">${esc(j.nama)}</button>`).join('') : '<span class="note">Menu belum dimuat.</span>';
 }
@@ -2208,6 +2235,21 @@ async function ubahPesanan(id, isi){
   if(error){ toast(terjemah(error), 'err'); return false; }
   return true;
 }
+// Setelah transaksi tersimpan: stok di layar ikut berkurang (database menguranginya sendiri lewat trigger)
+function kurangiStokLokal(items){ items.forEach(x => { if(stokMap.has(x.j.kunci)) stokMap.set(x.j.kunci, Math.max(0, stokMap.get(x.j.kunci) - x.q)); }); if(loadPesanan.pernah) renderPesanan(); }
+// Simpan stok saat kotak ditinggalkan / Enter
+$('pesananPanel').addEventListener('change', async e => {
+  const t = e.target; if(t.dataset.stok == null) return;
+  const k = t.dataset.stok, v = t.value.trim();
+  const {error} = v === '' ? await sb.from('stok_menu').delete().eq('kunci', k)
+    : await sb.from('stok_menu').upsert({kunci: k, sisa: Math.max(0, Math.floor(num(v))), updated_at: new Date().toISOString()});
+  if(error){ toast(terjemah(error), 'err'); return; }
+  if(v === '') stokMap.delete(k); else stokMap.set(k, Math.max(0, Math.floor(num(v))));
+  const j = jual.find(x => x.kunci === k);
+  toast(v === '' ? `Stok ${j ? j.nama : ''} tidak dibatasi` : `✓ Stok ${j ? j.nama : ''}: ${stokMap.get(k)}`, 'ok');
+  t.blur(); renderGrid(); renderPesanan();
+});
+$('pesananPanel').addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.dataset.stok != null){ e.preventDefault(); e.target.blur(); } });
 $('pesananPanel').addEventListener('click', async e => {
   const tk = e.target.closest('[data-toko]');
   if(tk){
@@ -2277,12 +2319,14 @@ $('kSimpan').addEventListener('click', async () => {
     // Pesanan online yang dibayar di kasir -> selesai
     if(pesananAktif && (payload.p_catatan || '').includes(pesananAktif.kode)){ await ubahPesanan(pesananAktif.id, {status:'selesai', penjualan_id: data.id}); loadPesanan(); }
     pesananAktif = null;
+    kurangiStokLokal(c.items);
     reset(); loadSaya(); refreshShift();
   } catch(err){
     if(isNetErr(err)){
       enqueue(payload, info);
       if(pesananAktif) toast(`Offline: setelah internet kembali, klik “Sudah dibayar” di pesanan ${pesananAktif.kode}`, 'info');
       pesananAktif = null;
+      kurangiStokLokal(c.items);
       msg(m,'info',`Internet putus. Transaksi ${rp(c.total)} disimpan di HP dan dikirim otomatis saat online.${kembali}`);
       toast(`Disimpan di HP (offline) · ${rp(c.total)}${kembali}`, 'info');
       reset(); renderAntrian(); setOffline(true);
