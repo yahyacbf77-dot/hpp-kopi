@@ -2191,6 +2191,11 @@ function bunyi(){
 }
 async function loadPesanan(){
   if(!me || !pesananReady || !navigator.onLine) return;
+  // Pesanan kemarin yang tidak diambil -> batal otomatis (stoknya kembali); cukup sekali per hari per perangkat
+  if(loadPesanan.bersih !== hariIni()){
+    const r = await sb.rpc('bersihkan_pesanan_lama');
+    if(!r.error){ loadPesanan.bersih = hariIni(); if(r.data > 0) toast(`${r.data} pesanan online kemarin yang tidak diambil dibatalkan otomatis`, 'info'); }
+  }
   const [p, t, h, st] = await Promise.all([
     sb.from('pesanan').select('*').in('status', ['menunggu','diterima','siap']).order('created_at'),
     sb.from('status_toko').select('*').eq('id', 1).maybeSingle(),
