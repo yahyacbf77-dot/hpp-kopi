@@ -1407,7 +1407,6 @@ function webSection(p){
       <label class="field"><span>Kelompok di web</span><input type="text" data-w="kelompok" value="${esc(w.kelompok || '')}" placeholder="mis. Kopi dingin"></label>
       <label class="field"><span>&nbsp;</span><label class="cek"><input type="checkbox" data-w="andalan" ${w.andalan ? 'checked' : ''}> Andalan</label></label>
     </div>
-    <label class="field"><span>Keterangan singkat untuk pelanggan</span><input type="text" data-w="ket" value="${esc(w.ket || '')}" maxlength="120" placeholder="mis. Espresso, susu segar, dan gula aren cair"></label>
     <label class="field"><span>Nama file foto (di folder Foto pada repo web menu, boleh kosong)</span><input type="text" data-w="foto" value="${esc(w.foto || '')}" maxlength="120" placeholder="mis. es-kopi-susu-gula-aren.webp"></label>
     <p class="note">Harga di web menu memakai harga jual di atas${p.varian.length ? ' (setiap varian tampil sebagai menu sendiri)' : ''}. Klik <b>Simpan menu</b> supaya perubahan tampil di web.</p>
   </details>`;
