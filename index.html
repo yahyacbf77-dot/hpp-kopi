@@ -681,6 +681,21 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
           <div class="panel card"><h2>Per saluran</h2><p class="note">Laba kotor sudah dikurangi potongan aplikasi.</p><div class="tbl-wrap"><table><thead><tr><th>Saluran</th><th class="r">Transaksi</th><th class="r">Omzet</th><th class="r">Potongan</th><th class="r">Laba kotor</th></tr></thead><tbody id="lSaluran"></tbody></table></div></div>
           <div class="panel card"><h2>Per cara bayar</h2><p class="note">Cocokkan dengan uang di laci, saldo QRIS, dan mutasi rekening.</p><div class="tbl-wrap"><table><thead><tr><th>Cara bayar</th><th class="r">Transaksi</th><th class="r">Total</th></tr></thead><tbody id="lMetode"></tbody></table></div></div>
         </div>
+        <div class="panel card" id="bonusPanel">
+          <div class="sub">
+            <div>
+              <h2>Bonus karyawan</h2>
+              <p class="note">Bonus = <b id="bonusPersenTeks">10</b>% × (laba kotor dari transaksi yang dia catat − target). Laba kotor = omzet setelah diskon − potongan aplikasi ojol − HPP. Target = bagian biaya kedai yang harus tertutup dulu tiap bulan; kosongkan kalau tanpa target.</p>
+            </div>
+            <label class="field" style="width:130px"><span>Persen bonus (%)</span><input type="number" min="0" max="100" step="0.5" id="bonusPersen" value="10"></label>
+          </div>
+          <p class="msg info" id="bonusInfo" hidden></p>
+          <div class="tbl-wrap"><table class="bonus-tbl">
+            <thead><tr><th>Karyawan</th><th class="r">Transaksi</th><th class="r">Omzet</th><th class="r">HPP</th><th class="r">Potongan ojol</th><th class="r">Laba kotor</th><th class="r">Target / bulan</th><th class="r">Bonus</th></tr></thead>
+            <tbody id="bonusBody"></tbody>
+          </table></div>
+          <p class="note" id="bonusCatatan"></p>
+        </div>
         <div class="panel card">
           <h2>Buka / tutup kasir</h2>
           <p class="note">Selisih = uang fisik − (modal awal + penjualan tunai). Minus berarti uang di laci kurang.</p>
@@ -2494,12 +2509,14 @@ async function loadLaporan(){
   msg($('lMsg'),'info','Memuat laporan…');
   try {
     const [trx, by, sh] = await Promise.all([
-      fetchAll(() => sb.from('penjualan').select('id,waktu,tanggal,metode,saluran,subtotal,diskon,komisi,total,total_hpp,batal,catatan,profiles(nama),penjualan_item(nama,qty,harga,hpp)').gte('tanggal', dari).lte('tanggal', sampai).order('waktu', {ascending:false})),
+      fetchAll(() => sb.from('penjualan').select('id,waktu,tanggal,metode,saluran,subtotal,diskon,komisi,total,total_hpp,batal,catatan,dibuat_oleh,profiles(nama),penjualan_item(nama,qty,harga,hpp)').gte('tanggal', dari).lte('tanggal', sampai).order('waktu', {ascending:false})),
       fetchAll(() => sb.from('biaya').select('nilai').gte('tanggal', dari).lte('tanggal', sampai)),
       fetchAll(() => sb.from('shift').select('*, profiles(nama)').gte('dibuka_pada', dari + 'T00:00:00+08:00').lte('dibuka_pada', sampai + 'T23:59:59+08:00').order('dibuka_pada', {ascending:false})).catch(() => null),
     ]);
     msg($('lMsg'),'info','');
     renderLaporan(trx, by, sh, dari, sampai);
+    await muatBonusSetelan();
+    renderBonus(trx.filter(t => !t.batal), dari, sampai);
   } catch(err){ msg($('lMsg'),'err','Gagal memuat laporan: ' + terjemah(err) + '. Pastikan penjualan.sql dan fitur-lanjutan.sql sudah dijalankan.'); }
 }
 function renderLaporan(trx, by, sh, dari, sampai){
@@ -2553,6 +2570,69 @@ function renderLaporan(trx, by, sh, dari, sampai){
     + (trx.length > 300 ? `<tr><td colspan="8" class="note">Menampilkan 300 transaksi terbaru dari ${trx.length}.</td></tr>` : '')
     : `<tr><td colspan="8" class="empty">Belum ada transaksi di periode ini.</td></tr>`;
 }
+
+/* ---------- Bonus karyawan ----------
+   Disimpan di tabel pengaturan (kunci 'bonus_karyawan'): {persen, target: {idKaryawan: Rp per bulan}}.
+   Transaksi pemilik tidak dihitung. */
+let bonusSetelan = {persen: 10, target: {}}, bonusTim = [], bonusData = null, bonusTimer = null;
+async function muatBonusSetelan(){
+  const [pg, tm] = await Promise.all([
+    sb.from('pengaturan').select('nilai').eq('kunci', 'bonus_karyawan').maybeSingle(),
+    sb.from('profiles').select('id,nama,role,aktif'),
+  ]);
+  if(!pg.error && pg.data && pg.data.nilai) bonusSetelan = Object.assign({persen: 10, target: {}}, pg.data.nilai);
+  if(!tm.error) bonusTim = tm.data || [];
+  $('bonusPersen').value = bonusSetelan.persen;
+}
+function simpanBonusSetelan(){
+  clearTimeout(bonusTimer);
+  bonusTimer = setTimeout(async () => {
+    const {error} = await sb.from('pengaturan').upsert({kunci: 'bonus_karyawan', nilai: bonusSetelan, updated_at: new Date().toISOString()});
+    if(error) toast('Setelan bonus belum tersimpan: ' + terjemah(error) + '. Pastikan biaya-tetap.sql sudah dijalankan.', 'err');
+  }, 700);
+}
+function renderBonus(ok, dari, sampai){
+  if(ok) bonusData = {ok, dari, sampai};
+  if(!bonusData) return;
+  ({ok, dari, sampai} = bonusData);
+  const persen = Math.max(0, num(bonusSetelan.persen)) / 100;
+  $('bonusPersenTeks').textContent = num(bonusSetelan.persen).toLocaleString('id-ID');
+  // Target bulanan disesuaikan kalau periodenya bukan satu bulan penuh (mis. 7 hari)
+  const tglD = new Date(dari + 'T00:00:00'), tglS = new Date(sampai + 'T00:00:00');
+  const hariBulan = new Date(tglD.getFullYear(), tglD.getMonth() + 1, 0).getDate();
+  const satuBulan = dari.slice(0, 7) === sampai.slice(0, 7) && dari.endsWith('-01');
+  const faktor = satuBulan ? 1 : Math.min(1, (Math.round((tglS - tglD) / 86400000) + 1) / hariBulan);
+  const ownerIds = new Set(bonusTim.filter(p => p.role === 'owner').map(p => p.id));
+  const per = new Map();
+  ok.forEach(t => {
+    if(!t.dibuat_oleh || ownerIds.has(t.dibuat_oleh)) return;
+    const x = per.get(t.dibuat_oleh) || {c:0, o:0, h:0, k:0};
+    x.c++; x.o += +t.total; x.h += +t.total_hpp; x.k += +(t.komisi || 0); per.set(t.dibuat_oleh, x);
+  });
+  // Semua karyawan aktif tampil walau belum ada penjualan
+  bonusTim.filter(p => p.role === 'karyawan' && p.aktif).forEach(p => { if(!per.has(p.id)) per.set(p.id, {c:0, o:0, h:0, k:0}); });
+  const nama = id => { const p = bonusTim.find(x => x.id === id); return p ? (p.nama || '(tanpa nama)') : '(akun dihapus)'; };
+  let totalBonus = 0;
+  const baris = [...per.entries()].sort((a,b) => b[1].o - a[1].o).map(([id, x]) => {
+    const laba = x.o - x.k - x.h, tBulan = num(bonusSetelan.target[id] || 0), t = Math.round(tBulan * faktor);
+    const bonus = Math.max(0, Math.round((laba - t) * persen)); totalBonus += bonus;
+    return `<tr><td><b>${esc(nama(id))}</b></td><td class="r num">${x.c}</td><td class="r num">${rp(x.o)}</td><td class="r num">${rp(x.h)}</td><td class="r num">${x.k ? rp(x.k) : '–'}</td>
+      <td class="r num" style="color:${laba < 0 ? 'var(--bad)' : 'inherit'}">${rp(laba)}</td>
+      <td class="r"><input type="text" inputmode="numeric" class="uang" autocomplete="off" data-target="${esc(id)}" value="${fmtU(tBulan)}" placeholder="tanpa target" style="max-width:130px">${faktor < 1 && tBulan ? `<div class="note num">periode ini ${rp(t)}</div>` : ''}</td>
+      <td class="r num"><b style="color:${bonus > 0 ? 'var(--good)' : 'inherit'}">${rp(bonus)}</b>${tBulan && laba < t ? `<div class="note">kurang ${rp(t - laba)} lagi</div>` : ''}</td></tr>`;
+  });
+  $('bonusBody').innerHTML = baris.length ? baris.join('') + `<tr><td colspan="7" style="text-align:right"><b>Total bonus</b></td><td class="r num"><b>${rp(totalBonus)}</b></td></tr>`
+    : `<tr><td colspan="8" class="empty">Belum ada karyawan. Tambahkan di tab Karyawan.</td></tr>`;
+  $('bonusCatatan').textContent = (satuBulan ? 'Periode satu bulan: target dipakai penuh.' : `Periode ${Math.round(faktor * hariBulan)} hari: target bulanan disesuaikan (${pct(faktor)}).`) +
+    ' Transaksi yang dibatalkan dan transaksi pemilik tidak dihitung. Pastikan setiap karyawan memakai akunnya sendiri saat jaga kasir.';
+}
+$('bonusPersen').addEventListener('input', e => { bonusSetelan.persen = num(e.target.value); renderBonus(); simpanBonusSetelan(); });
+$('bonusBody').addEventListener('change', e => {
+  const t = e.target; if(t.dataset.target == null) return;
+  const v = num(t.value); bonusSetelan.target = Object.assign({}, bonusSetelan.target);
+  if(v > 0) bonusSetelan.target[t.dataset.target] = v; else delete bonusSetelan.target[t.dataset.target];
+  renderBonus(); simpanBonusSetelan();
+});
 
 /* =====================================================================
    BIAYA OPERASIONAL (pemilik)
