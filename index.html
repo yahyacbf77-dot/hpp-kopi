@@ -129,6 +129,23 @@ tbody tr:last-child td{border-bottom:0}
 
 .tetap-box{background:var(--accent-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .tetap-list{display:flex;flex-wrap:wrap;gap:8px 18px}
+/* Pesanan online di kasir */
+.toko-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.psn{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-top:10px;background:var(--bg)}
+.psn.menunggu{border-color:var(--warn);background:var(--warn-soft)}
+.psn-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px}
+.psn-head .kode{font-family:var(--f-display);font-size:22px;font-weight:700;font-variant-numeric:lining-nums}
+.psn-items{margin:0;padding-left:18px}
+.psn-aksi{display:flex;flex-wrap:wrap;gap:6px}
+.psn-aksi .btn{padding:9px 14px}
+.habis-list{display:flex;flex-wrap:wrap;gap:6px}
+.habis-list button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;cursor:pointer;font-weight:500}
+.habis-list button[aria-pressed="true"]{background:var(--bad-soft);color:var(--bad);border-color:transparent;text-decoration:line-through}
+#tabs .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;margin-left:4px}
+.web-box{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.web-box[open]{display:flex;flex-direction:column;gap:10px}
+.web-box>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;cursor:pointer;list-style:none}
+.web-box>summary::-webkit-details-marker{display:none}
 .cek{display:inline-flex;align-items:center;gap:8px;font-weight:500;cursor:pointer;min-height:34px}
 .cek input{width:18px;height:18px;accent-color:var(--accent);margin:0}
 .menu-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:5}
@@ -503,6 +520,19 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
 
     <!-- PEMILIK: Ringkasan -->
     <section id="tab-ringkasan" hidden>
+      <div class="panel card" style="margin-bottom:20px">
+        <div class="sub">
+          <div>
+            <h2>Web menu pelanggan</h2>
+            <p class="note">Menu yang dicentang “Tampil di web menu” muncul di web menu dan bisa dipesan pelanggan. Harga memakai harga jual di sini. Keterangan, kelompok, dan menu andalan bisa diambil sekali dari Google Sheets yang lama.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" type="button" id="imporSheet">Impor dari Google Sheets</button>
+          </div>
+        </div>
+        <p class="note" id="webInfo"></p>
+        <div class="msg info" id="imporHasil" hidden></div>
+      </div>
       <div class="panel card">
         <div>
           <h2>Ringkasan semua menu</h2>
@@ -523,6 +553,19 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
         <p class="msg info" id="kOffline" hidden>Mode offline: transaksi disimpan di HP ini dan dikirim otomatis saat internet kembali.</p>
         <div class="panel card" id="shiftBar"><p class="note">Memuat status kasir…</p></div>
         <div class="panel card" id="kAntrian" hidden></div>
+        <div class="panel card" id="pesananPanel" hidden>
+          <div class="sub">
+            <div><h2>Pesanan online <span class="chip warn" id="pesananJml" hidden></span></h2>
+              <p class="note">Dari web menu pelanggan. Terima dulu, buat dekat jam ambil, lalu <b>Bayar di kasir</b> saat pelanggan datang.</p></div>
+            <div class="toko-ctl" id="tokoCtl"></div>
+          </div>
+          <div id="pesananList"></div>
+          <details class="extra" id="habisBox">
+            <summary>Menu habis hari ini</summary>
+            <p class="note">Ketuk menu yang habis. Di web menu tampil “Habis hari ini” dan tidak bisa dipesan. Besok otomatis tersedia lagi.</p>
+            <div class="habis-list" id="habisList"></div>
+          </details>
+        </div>
         <div class="kasir">
           <div class="panel card">
             <div class="sub">
@@ -763,6 +806,15 @@ const num = v => {
 };
 // Tampilan nilai awal kolom uang: 250000 -> "250.000", 0 -> kosong
 const fmtU = v => { const n = Math.round(num(v)); return n ? n.toLocaleString('id-ID') : ''; };
+const vN = v => num(v) ? v : '';   // angka 0 / kosong ditampilkan kosong, jadi tidak perlu dihapus dulu
+// Klik kotak angka -> isinya langsung terpilih, ketik angka baru langsung mengganti
+document.addEventListener('focusin', e => {
+  const t = e.target;
+  if(t.tagName === 'INPUT' && (t.type === 'number' || t.classList.contains('uang')) && t.value){ t._pilih = true; setTimeout(() => { try { t.select(); } catch(_){} }, 0); }
+});
+// Lepas klik pertama jangan membatalkan pilihan (browser memindah kursor saat tombol mouse dilepas)
+document.addEventListener('mouseup', e => { if(e.target._pilih){ e.preventDefault(); e.target._pilih = false; } });
+document.addEventListener('focusout', e => { if(e.target) e.target._pilih = false; });
 // Saat mengetik di kolom uang, titik ribuan dipasang otomatis (posisi kursor dijaga)
 document.addEventListener('input', e => {
   const t = e.target;
@@ -861,6 +913,7 @@ function migrate(st){
     if(!Array.isArray(p.lain)) p.lain = [];
     if(!Array.isArray(p.varian)) p.varian = [];
     if(!Array.isArray(p.tetapOff)) p.tetapOff = [];
+    if(!p.web || typeof p.web !== 'object') p.web = {tampil:false};
     p.items.forEach(i => { if(!i.per) i.per = 'resep'; });
     jadikanPerCup(p);
     if(p.margin == null) p.margin = 55;
@@ -1197,6 +1250,7 @@ async function boot(session){
   if(me.role === 'owner'){ await loadOwner(); openTab('produk'); }
   else { await loadStaff(); openTab('kasir'); }
   flushQueue();
+  mulaiPollingPesanan();
 }
 
 /* ---------- Tab ---------- */
@@ -1330,6 +1384,22 @@ function bahanOptions(selId, list, pref){
     return xs.length ? `<optgroup label="${label[k]}">${xs.map(opt).join('')}</optgroup>` : '';
   }).join('');
 }
+// Tampilan di web menu pelanggan (pesan online)
+const HALAMAN_WEB = [['kopi','Kopi'],['lainnya','Bukan kopi'],['kue','Kue & roti'],['spesial','Spesial bulan ini']];
+function webSection(p){
+  const w = p.web || {}, hal = w.halaman || (p.kategori === 'Kue' ? 'kue' : 'kopi');
+  return `<details class="web-box" ${w.tampil ? 'open' : ''}>
+    <summary><label class="cek" style="min-height:0"><input type="checkbox" data-w="tampil" ${w.tampil ? 'checked' : ''}> Tampil di web menu pelanggan</label>
+      <span class="note">${w.tampil ? 'Pelanggan bisa melihat dan memesan menu ini' : 'Tidak tampil di web menu'}</span></summary>
+    <div class="row3">
+      <label class="field"><span>Halaman</span><select data-w="halaman">${HALAMAN_WEB.map(([k,l]) => `<option value="${k}" ${k===hal?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="field"><span>Kelompok di web</span><input type="text" data-w="kelompok" value="${esc(w.kelompok || '')}" placeholder="mis. Kopi dingin"></label>
+      <label class="field"><span>&nbsp;</span><label class="cek"><input type="checkbox" data-w="andalan" ${w.andalan ? 'checked' : ''}> Andalan</label></label>
+    </div>
+    <label class="field"><span>Keterangan singkat untuk pelanggan</span><input type="text" data-w="ket" value="${esc(w.ket || '')}" maxlength="120" placeholder="mis. Espresso, susu segar, dan gula aren cair"></label>
+    <p class="note">Harga di web menu memakai harga jual di atas${p.varian.length ? ' (setiap varian tampil sebagai menu sendiri)' : ''}. Klik <b>Simpan menu</b> supaya perubahan tampil di web.</p>
+  </details>`;
+}
 function tetapSection(p){
   const off = p.tetapOff || [];
   return `<div class="tetap-box">
@@ -1356,7 +1426,7 @@ function varianSection(p){
       <div class="tbl-wrap"><table class="items"><tbody>
         ${v.items.length ? v.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
           <td><select id="vi-b-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
-          <td><input type="number" min="0" step="any" id="vi-q-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="qty" value="${i.qty}"></td>
+          <td><input type="number" min="0" step="any" id="vi-q-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="qty" value="${vN(i.qty)}" placeholder="0"></td>
           <td>${b?esc(b.satuan):''}</td>
           <td><select id="vi-p-${vx}-${ix}" data-v="${vx}" data-vitem="${ix}" data-f="per"><option value="porsi" ${i.per!=='resep'?'selected':''}>per pcs</option><option value="resep" ${i.per==='resep'?'selected':''}>total varian</option></select></td>
           <td class="r num" data-vcost="${vx}-${ix}"></td>
@@ -1420,7 +1490,7 @@ function renderEditor(){
           <thead><tr><th>Bahan</th><th class="r">Takaran</th><th></th>${kue ? '<th>Dihitung</th>' : ''}<th class="r">Biaya</th><th></th></tr></thead>
           <tbody>${p.items.length ? p.items.map((i,ix) => { const b = bahanById(i.bahanId); return `<tr>
             <td><select id="it-b-${ix}" data-item="${ix}" data-f="bahanId">${bahanOptions(i.bahanId, null, p.kategori)}</select></td>
-            <td><input type="number" min="0" step="any" id="it-q-${ix}" data-item="${ix}" data-f="qty" value="${i.qty}"></td>
+            <td><input type="number" min="0" step="any" id="it-q-${ix}" data-item="${ix}" data-f="qty" value="${vN(i.qty)}" placeholder="0"></td>
             <td>${b?esc(b.satuan):''}</td>
             ${kue ? `<td><select id="it-p-${ix}" data-item="${ix}" data-f="per"><option value="resep" ${i.per!=='porsi'?'selected':''}>per adonan</option><option value="porsi" ${i.per==='porsi'?'selected':''}>per potong/pcs</option></select></td>` : ''}
             <td class="r num" data-cost="${ix}"></td>
@@ -1452,6 +1522,8 @@ function renderEditor(){
         <label class="field"><span>Target margin laba (%)</span><input type="number" min="0" max="95" step="1" id="pMargin" data-p="margin" value="${p.margin}"></label>
         ${kue && p.varian.length ? '' : `<label class="field"><span>Harga jual per <b id="unitJual">${unitOf(p)}</b> (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="pJual" data-p="hargaJual" value="${fmtU(p.hargaJual)}"></label>`}
       </div>
+
+      ${webSection(p)}
 
       <div class="sub" style="border-top:1px solid var(--line);padding-top:12px">
         <span class="note">Setelah selesai mengubah, klik <b>Simpan menu</b> di atas. Perubahan yang belum disimpan hilang kalau halaman di-refresh.</span>
@@ -1517,6 +1589,9 @@ function updateComputed(){
 const editorEl = $('editor');
 editorEl.addEventListener('input', e => {
   const t = e.target, p = state.produk.find(x => x.id === sel); if(!p) return;
+  if(t.dataset.w){ p.web = p.web || {}; const k = t.dataset.w; p.web[k] = t.type === 'checkbox' ? t.checked : t.value; tandaiMenu(p);
+    if(k === 'tampil'){ const d = t.closest('details'); if(d){ d.open = t.checked; d.querySelector('summary .note').textContent = t.checked ? 'Pelanggan bisa melihat dan memesan menu ini' : 'Tidak tampil di web menu'; } }
+    return; }
   if(t.dataset.tetap!=null){ p.tetapOff = (p.tetapOff||[]).filter(x => x !== t.dataset.tetap); if(!t.checked) p.tetapOff.push(t.dataset.tetap); tandaiMenu(p); }
   else if(t.dataset.p){ const k = t.dataset.p; p[k] = (k==='nama'||k==='kategori') ? t.value : num(t.value); tandaiMenu(p); if(k==='kategori'){ if(p.kategori==='Kopi') jadikanPerCup(p); renderList(); renderEditor(); return; } }
   else if(t.dataset.vitem!=null){ const i = p.varian[+t.dataset.v].items[+t.dataset.vitem]; i[t.dataset.f] = t.dataset.f==='qty' ? num(t.value) : t.value; tandaiMenu(p); if(t.dataset.f==='bahanId'){ renderEditor(); return; } }
@@ -1626,13 +1701,13 @@ function barisEdit(id, d){
   return `<tr class="brow sedang-edit">
     <td><input type="text" id="b-n-${id}" data-bf="nama" value="${esc(d.nama)}" placeholder="mis. Susu UHT" aria-label="Nama bahan"></td>
     <td data-l="Harga beli (Rp)"><input type="text" inputmode="numeric" class="uang" autocomplete="off" data-bf="harga" value="${fmtU(d.harga)}" aria-label="Harga beli"></td>
-    <td data-l="Isi kemasan"><input type="number" min="0" step="any" data-bf="isi" value="${d.isi}" aria-label="Isi kemasan"></td>
+    <td data-l="Isi kemasan"><input type="number" min="0" step="any" data-bf="isi" value="${vN(d.isi)}" placeholder="mis. 1000" aria-label="Isi kemasan"></td>
     <td data-l="Satuan"><select data-bf="satuan" aria-label="Satuan">${['gr','ml','pcs'].map(s=>`<option ${s===d.satuan?'selected':''}>${s}</option>`).join('')}</select></td>
     <td class="r num" data-l="Harga / satuan" id="b-pu">${rp2(hargaSatuan(d))} / ${esc(d.satuan)}</td>
     <td></td></tr>
   <tr class="edit-bawah"><td colspan="6"><div class="edit-aksi">
     ${kopi ? `<label class="cek"><input type="checkbox" data-bf="tetap" ${d.tetap ? 'checked' : ''}> Tetap tiap cup</label>
-      <label class="field tetap-qty" ${d.tetap ? '' : 'hidden'}><span>Takaran per cup (${esc(d.satuan)})</span><input type="number" min="0" step="any" data-bf="qty" value="${d.qty}" placeholder="kosong = ambil dari resep"></label>
+      <label class="field tetap-qty" ${d.tetap ? '' : 'hidden'}><span>Takaran per cup (${esc(d.satuan)})</span><input type="number" min="0" step="any" data-bf="qty" value="${vN(d.qty)}" placeholder="kosong = ambil dari resep"></label>
       <span class="note tetap-info" ${d.tetap ? '' : 'hidden'} id="b-tetap-info"></span>` : ''}
     <span style="flex:1"></span>
     ${editB && !editB.baru ? `<button class="link" type="button" data-pindah-b title="Kalau bahan ini salah kelompok">Pindah ke bahan ${kopi ? 'kue' : 'kopi'}</button>
@@ -1648,7 +1723,7 @@ function infoTetap(){
 }
 function mulaiEditBahan(id, baru){
   if(editB && editB.id !== id && !confirm('Perubahan bahan yang sedang diedit belum disimpan. Tinggalkan?')) return;
-  if(baru) editB = {id: uid(), baru: true, d: {nama:'', kategori: baru, harga:0, isi:1000, satuan:'gr', tetap:false, qty:''}};
+  if(baru) editB = {id: uid(), baru: true, d: {nama:'', kategori: baru, harga:'', isi:'', satuan:'gr', tetap:false, qty:''}};
   else {
     const b = bahanById(id), t = tetapDari(id);
     editB = {id, baru: false, d: {nama:b.nama, kategori:katBahan(b), harga:b.harga, isi:b.isi, satuan:b.satuan, tetap: !!t, qty: t ? t.qty : ''}};
@@ -1718,8 +1793,59 @@ $('bahanBody').addEventListener('click', e => {
 });
 function tambahBahan(kategori){ mulaiEditBahan(null, kategori || 'Kopi'); }
 
+/* ---------- Web menu pelanggan: impor dari Google Sheets lama ---------- */
+const SHEET_MENU = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQsOLSZKUcKFPdyYLq6pPIkZIhB8BOPN4JAHyvYdrIQxeJjs_VNKQwF5mA3CpvPQ_IzkK76TggkqR0T/pub?gid=1622267089&single=true&output=csv';
+function bacaCSV(t){
+  const baris = []; let kol = [], sel = '', kutip = false;
+  for(let i = 0; i < t.length; i++){
+    const c = t[i];
+    if(kutip){ if(c === '"'){ if(t[i+1] === '"'){ sel += '"'; i++; } else kutip = false; } else sel += c; }
+    else if(c === '"') kutip = true;
+    else if(c === ','){ kol.push(sel); sel = ''; }
+    else if(c === '\n' || c === '\r'){ if(c === '\r' && t[i+1] === '\n') i++; kol.push(sel); baris.push(kol); kol = []; sel = ''; }
+    else sel += c;
+  }
+  if(sel || kol.length){ kol.push(sel); baris.push(kol); }
+  return baris;
+}
+const normNama = s => (s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+function renderWebInfo(){
+  const el = $('webInfo'); if(!el) return;
+  const xs = state.produk.filter(p => p.web && p.web.tampil);
+  el.textContent = xs.length ? `${xs.length} dari ${state.produk.length} menu tampil di web menu.` : 'Belum ada menu yang tampil di web menu.';
+}
+$('imporSheet').addEventListener('click', async () => {
+  const out = $('imporHasil'), btn = $('imporSheet');
+  btn.disabled = true; btn.textContent = 'Mengambil…';
+  try {
+    const r = await fetch(SHEET_MENU + '&t=' + Date.now()); if(!r.ok) throw new Error('HTTP ' + r.status);
+    const rows = bacaCSV(await r.text()); const head = (rows[0] || []).map(h => h.trim().toLowerCase()), ix = n => head.indexOf(n);
+    const ya = v => /^(true|ya|y|x|1|v|✓)$/i.test((v || '').trim());
+    const halamanDari = v => { v = (v || '').trim().toLowerCase(); return v.startsWith('kue') || v.startsWith('roti') ? 'kue' : v.startsWith('spesial') ? 'spesial' : v.startsWith('kopi') ? 'kopi' : 'lainnya'; };
+    const data = rows.slice(1).filter(c => (c[ix('halaman')] || '').trim().toLowerCase() !== 'status').map((c, i) => ({halaman: halamanDari(c[ix('halaman')]), kelompok: (c[ix('kategori')] || '').trim(), nama: (c[ix('nama')] || '').trim(),
+      harga: parseInt((c[ix('harga')] || '').replace(/\D/g, ''), 10) || 0, ket: (c[ix('keterangan')] || '').trim(), andalan: ya(c[ix('andalan')]), urut: i + 1}))
+      .filter(m => m.nama && m.harga);
+    const cocok = [], tidak = [], beda = [];
+    data.forEach(m => {
+      const p = state.produk.find(x => normNama(x.nama) === normNama(m.nama));
+      if(!p){ tidak.push(m.nama); return; }
+      p.web = Object.assign({}, p.web, {tampil: true, halaman: m.halaman, kelompok: m.kelompok, ket: m.ket, andalan: m.andalan, urut: m.urut});
+      cocok.push(p.nama);
+      if(!p.varian.length && num(p.hargaJual) && num(p.hargaJual) !== m.harga) beda.push(`${p.nama} (Sheets ${rp(m.harga)}, HPP ${rp(p.hargaJual)})`);
+    });
+    if(cocok.length){ save(); renderList(); if(currentTab === 'produk') renderEditor(); }
+    renderWebInfo();
+    out.innerHTML = `<b>${cocok.length} menu</b> diisi dan dicentang tampil di web.` +
+      (tidak.length ? `<div style="margin-top:6px"><b>Tidak ketemu di HPP (${tidak.length}):</b> ${tidak.map(esc).join(', ')}. Buat menunya di tab Menu &amp; HPP (nama sama persis), lalu impor lagi, atau isi bagian “Tampil di web menu” di menu itu.</div>` : '') +
+      (beda.length ? `<div style="margin-top:6px"><b>Harga berbeda — web menu akan memakai harga HPP:</b> ${beda.map(esc).join('; ')}.</div>` : '');
+    out.hidden = false;
+  } catch(e){ out.className = 'msg err'; out.textContent = 'Google Sheets tidak bisa diambil (' + (e.message || e) + '). Coba lagi nanti.'; out.hidden = false; }
+  btn.disabled = false; btn.textContent = 'Impor dari Google Sheets';
+});
+
 /* ---------- Ringkasan ---------- */
 function renderSummary(){
+  renderWebInfo();
   const body = $('sumBody');
   if(!state.produk.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Belum ada menu.</td></tr>`; return; }
   const row = (p, nama, h) => { const st = status(p,h); return `<tr>
@@ -1938,6 +2064,7 @@ async function loadJual(){
   if(!salAktif().find(x => x.id === kSaluran)) kSaluran = salAktif()[0].id;
   [...cart.keys()].forEach(k => { if(!jual.find(x => x.kunci === k)) cart.delete(k); });
   renderSaluran(); renderGrid(); renderCart();
+  if(loadPesanan.pernah) renderPesanan();
   if(me.role === 'owner' && !err) renderSalSet();
 }
 function renderSaluran(){
@@ -2017,7 +2144,118 @@ $('kMetode').addEventListener('click', e => { const b = e.target.closest('[data-
 $('kDiskonMode').addEventListener('click', e => { const b = e.target.closest('[data-dm]'); if(!b) return; kDiskonMode = b.dataset.dm; pilihSeg($('kDiskonMode'), b); renderCart(); });
 $('kDiskon').addEventListener('input', renderCart);
 $('kBayar').addEventListener('input', () => updateKembali());
-$('kReload').addEventListener('click', () => { loadJual(); loadSaya(); refreshShift(); flushQueue(true); });
+$('kReload').addEventListener('click', () => { loadJual(); loadSaya(); refreshShift(); flushQueue(true); loadPesanan(); });
+
+/* ---------- Pesanan online dari web menu pelanggan ---------- */
+let pesanan = [], pesananReady = true, pesananAktif = null, pesananTimer = null, sudahBunyi = new Set(), tokoStatus = null, habisSet = new Set();
+const hariIni = () => new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Makassar'}).format(new Date());
+function bunyi(){
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if(!A) return;
+    const c = bunyi.c || (bunyi.c = new A());
+    [0, 0.22].forEach(t => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, c.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.3, c.currentTime + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + t + 0.18);
+      o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 0.2); });
+  } catch(e){}
+}
+async function loadPesanan(){
+  if(!me || !pesananReady || !navigator.onLine) return;
+  const [p, t, h] = await Promise.all([
+    sb.from('pesanan').select('*').in('status', ['menunggu','diterima','siap']).order('created_at'),
+    sb.from('status_toko').select('*').eq('id', 1).maybeSingle(),
+    sb.from('menu_habis').select('kunci,tanggal'),
+  ]);
+  if(p.error){ if(/pesanan|relation|schema cache|does not exist/i.test(p.error.message || '')){ pesananReady = false; $('pesananPanel').hidden = true; } return; }
+  pesanan = p.data || []; tokoStatus = t.data || null;
+  habisSet = new Set((h.data || []).filter(x => x.tanggal === hariIni()).map(x => x.kunci));
+  const baru = pesanan.filter(x => x.status === 'menunggu' && !sudahBunyi.has(x.id));
+  if(baru.length && sudahBunyi.size + baru.length > 0 && loadPesanan.pernah){ bunyi(); toast(`🔔 Pesanan online baru: ${baru.map(x => x.kode + ' ' + x.nama).join(', ')}`, 'info'); }
+  baru.forEach(x => sudahBunyi.add(x.id)); loadPesanan.pernah = true;
+  renderPesanan();
+}
+function mulaiPollingPesanan(){ clearInterval(pesananTimer); loadPesanan(); pesananTimer = setInterval(loadPesanan, 15000); }
+function renderPesanan(){
+  $('pesananPanel').hidden = !pesananReady;
+  const menunggu = pesanan.filter(x => x.status === 'menunggu').length;
+  const jml = $('pesananJml'); jml.hidden = !menunggu; jml.textContent = menunggu + ' baru';
+  const tab = document.querySelector('#tabs [data-tab="kasir"] .lbl');
+  if(tab){ let b = tab.querySelector('.badge'); if(menunggu){ if(!b){ b = document.createElement('span'); b.className = 'badge'; tab.appendChild(b); } b.textContent = menunggu; } else if(b) b.remove(); }
+  // Status toko
+  const s = tokoStatus || {}, ist = s.istirahat_sampai && new Date(s.istirahat_sampai) > new Date();
+  const ket = s.tutup_sementara ? '<span class="chip bad">Kedai tutup sementara</span>' : !s.pesan_online ? '<span class="chip bad">Pesan online mati</span>'
+    : ist ? `<span class="chip warn">Istirahat sampai ${jam(s.istirahat_sampai)}</span>` : '<span class="chip good">Pesan online buka</span>';
+  $('tokoCtl').innerHTML = ket + (s.tutup_sementara || !s.pesan_online || ist
+    ? `<button class="btn small" type="button" data-toko="buka">Buka lagi</button>`
+    : `<button class="btn small" type="button" data-toko="istirahat">Istirahat 15 menit</button><button class="btn small" type="button" data-toko="matikan">Matikan pesan online</button>`);
+  // Daftar pesanan: yang menunggu dulu, lalu urut jam ambil
+  const urut = [...pesanan].sort((a,b) => (a.status === 'menunggu' ? 0 : 1) - (b.status === 'menunggu' ? 0 : 1) || (a.ambil_menit ?? 9999) - (b.ambil_menit ?? 9999));
+  $('pesananList').innerHTML = urut.length ? urut.map(x => `<div class="psn ${x.status}">
+      <div class="psn-head"><div><span class="kode">${esc(x.kode)}</span> · <b>${esc(x.nama)}</b> <span class="chip ${x.status === 'menunggu' ? 'warn' : x.status === 'siap' ? 'good' : 'neutral'}">${{menunggu:'Menunggu', diterima:'Diterima', siap:'Siap diambil'}[x.status]}</span></div>
+        <b class="num">${rp(x.total)}</b></div>
+      <div class="note" style="color:var(--fg)">${esc(x.cara)} · ambil ${esc(x.ambil_teks || 'secepatnya')} · masuk ${jam(x.created_at)}</div>
+      <ul class="psn-items">${(x.items || []).map(i => `<li>${i.qty}× ${esc(i.nama)}${habisSet.has(i.kunci) ? ' <span class="chip bad">habis</span>' : ''}</li>`).join('')}</ul>
+      ${x.catatan ? `<div class="note" style="color:var(--fg)">Catatan: ${esc(x.catatan)}</div>` : ''}
+      <div class="psn-aksi">${x.status === 'menunggu'
+        ? `<button class="btn primary" type="button" data-psn="terima" data-id="${x.id}">Terima</button><button class="btn" type="button" data-psn="tolak" data-id="${x.id}">Tolak</button><button class="btn ghost" type="button" data-psn="blokir" data-id="${x.id}">Blokir HP ini</button>`
+        : `${x.status === 'diterima' ? `<button class="btn" type="button" data-psn="siap" data-id="${x.id}">Tandai siap</button>` : ''}<button class="btn primary" type="button" data-psn="bayar" data-id="${x.id}">Bayar di kasir</button><button class="btn ghost" type="button" data-psn="lunas" data-id="${x.id}" title="Kalau transaksinya sudah dicatat di kasir">Sudah dibayar</button><button class="btn ghost" type="button" data-psn="batal" data-id="${x.id}">Batalkan</button>`}
+      </div></div>`).join('')
+    : `<p class="note" style="margin-top:8px">Belum ada pesanan online yang aktif.</p>`;
+  // Menu habis
+  $('habisList').innerHTML = jual.length ? jual.map(j => `<button type="button" data-habis="${esc(j.kunci)}" aria-pressed="${habisSet.has(j.kunci)}">${esc(j.nama)}</button>`).join('') : '<span class="note">Menu belum dimuat.</span>';
+}
+async function ubahPesanan(id, isi){
+  const {error} = await sb.from('pesanan').update({...isi, updated_at: new Date().toISOString()}).eq('id', id);
+  if(error){ toast(terjemah(error), 'err'); return false; }
+  return true;
+}
+$('pesananPanel').addEventListener('click', async e => {
+  const tk = e.target.closest('[data-toko]');
+  if(tk){
+    const a = tk.dataset.toko; let ketTeks = null;
+    if(a === 'matikan'){ ketTeks = prompt('Alasan (tampil ke pelanggan, boleh kosong):', 'sedang ramai'); if(ketTeks === null) return; }
+    const {error} = await sb.rpc('atur_toko', {p_aksi: a, p_menit: 15, p_ket: ketTeks});
+    if(error) toast(terjemah(error), 'err'); else loadPesanan();
+    return;
+  }
+  const hb = e.target.closest('[data-habis]');
+  if(hb){
+    const k = hb.dataset.habis, on = !habisSet.has(k);
+    const {error} = on ? await sb.from('menu_habis').upsert({kunci: k, tanggal: hariIni()}) : await sb.from('menu_habis').delete().eq('kunci', k);
+    if(error){ toast(terjemah(error), 'err'); return; }
+    on ? habisSet.add(k) : habisSet.delete(k); renderPesanan(); return;
+  }
+  const b = e.target.closest('[data-psn]'); if(!b) return;
+  const x = pesanan.find(p => p.id === b.dataset.id); if(!x) return;
+  const a = b.dataset.psn;
+  if(a === 'terima'){ if(await ubahPesanan(x.id, {status:'diterima'})) toast(`✓ ${x.kode} diterima. Buat dekat jam ambil: ${x.ambil_teks || 'secepatnya'}`, 'ok'); }
+  else if(a === 'siap'){ if(await ubahPesanan(x.id, {status:'siap'})) toast(`✓ ${x.kode} siap diambil`, 'ok'); }
+  else if(a === 'lunas'){ if(!confirm(`Tandai ${x.kode} sudah dibayar? Pastikan transaksinya sudah dicatat di kasir.`)) return; if(await ubahPesanan(x.id, {status:'selesai'})) toast(`✓ ${x.kode} selesai`, 'ok'); }
+  else if(a === 'tolak' || a === 'batal'){
+    const al = prompt(a === 'tolak' ? `Alasan menolak ${x.kode} (tampil ke pelanggan):` : `Alasan membatalkan ${x.kode}:`, a === 'tolak' ? 'Maaf, menu sedang habis' : 'Tidak diambil');
+    if(al === null) return;
+    if(await ubahPesanan(x.id, {status: a === 'tolak' ? 'ditolak' : 'batal', alasan: al.trim() || null})) toast(`${x.kode} ${a === 'tolak' ? 'ditolak' : 'dibatalkan'}`, 'info');
+  }
+  else if(a === 'blokir'){
+    if(!confirm(`Blokir HP yang mengirim ${x.kode} (${x.nama})? Pesanan ini ditolak dan HP itu tidak bisa memesan online lagi.`)) return;
+    const r = await sb.from('perangkat_blokir').upsert({perangkat: x.perangkat, alasan: `${x.kode} ${x.nama}`});
+    if(r.error){ toast(terjemah(r.error), 'err'); return; }
+    await ubahPesanan(x.id, {status:'ditolak', alasan:'Pesanan tidak bisa diproses'}); toast(`HP pengirim ${x.kode} diblokir`, 'info');
+  }
+  else if(a === 'bayar'){
+    const hilang = [];
+    cart.clear();
+    (x.items || []).forEach(i => { if(jual.find(j => j.kunci === i.kunci)) cart.set(i.kunci, (cart.get(i.kunci) || 0) + i.qty); else hilang.push(i.nama); });
+    const ta = salAktif().find(s => s.id === (x.cara === 'Makan di sini' ? 'dinein' : 'takeaway')) || salAktif().find(s => !s.bayar_aplikasi) || salAktif()[0];
+    kSaluran = ta.id; renderSaluran();
+    $('kCatatan').value = `Online ${x.kode} · ${x.nama}`; $('kExtra').open = true;
+    pesananAktif = {id: x.id, kode: x.kode};
+    renderGrid(); renderCart(); bukaSheet(true);
+    msg($('kMsg'), hilang.length ? 'err' : 'info', hilang.length ? `Menu tidak ada di kasir: ${hilang.join(', ')}. Periksa lagi sebelum simpan.` : `Pesanan ${x.kode} dimasukkan ke keranjang. Periksa, pilih cara bayar, lalu Simpan.`);
+    if(window.matchMedia('(min-width:700px)').matches) $('cartList').scrollIntoView({block:'center', behavior:'smooth'});
+    return;
+  }
+  loadPesanan();
+});
 
 $('kSimpan').addEventListener('click', async () => {
   const m = $('kMsg'), c = hitungCart(), s = salCur();
@@ -2036,10 +2274,15 @@ $('kSimpan').addEventListener('click', async () => {
     if(error) throw error;
     msg(m,'ok',`Tersimpan (#${data.id}) · ${s.nama} · ${metode} ${rp(data.total)}${kembali}`);
     toast(`✓ Tersimpan · ${rp(data.total)}${kembali}`, 'ok');
+    // Pesanan online yang dibayar di kasir -> selesai
+    if(pesananAktif && (payload.p_catatan || '').includes(pesananAktif.kode)){ await ubahPesanan(pesananAktif.id, {status:'selesai', penjualan_id: data.id}); loadPesanan(); }
+    pesananAktif = null;
     reset(); loadSaya(); refreshShift();
   } catch(err){
     if(isNetErr(err)){
       enqueue(payload, info);
+      if(pesananAktif) toast(`Offline: setelah internet kembali, klik “Sudah dibayar” di pesanan ${pesananAktif.kode}`, 'info');
+      pesananAktif = null;
       msg(m,'info',`Internet putus. Transaksi ${rp(c.total)} disimpan di HP dan dikirim otomatis saat online.${kembali}`);
       toast(`Disimpan di HP (offline) · ${rp(c.total)}${kembali}`, 'info');
       reset(); renderAntrian(); setOffline(true);
