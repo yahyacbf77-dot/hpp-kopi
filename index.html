@@ -137,6 +137,21 @@ tbody tr:last-child td{border-bottom:0}
 .qris-wadah{display:flex;justify-content:center}
 .qris-wadah img{max-width:100%;max-height:62vh;object-fit:contain}
 .qris-kartu .btn.primary{background:#9a5b25;color:#fff;border-color:#9a5b25}
+/* Jendela kecil: kas keluar/masuk, alasan batal */
+dialog.dlg{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);padding:0;width:min(440px,calc(100vw - 24px))}
+dialog.dlg::backdrop{background:rgba(20,14,10,.55)}
+dialog.dlg form{display:flex;flex-direction:column;gap:12px;padding:16px}
+dialog.dlg h2{margin:0}
+.pilih-cepat{display:flex;flex-wrap:wrap;gap:6px}
+.pilih-cepat button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:9px 13px;font:inherit;font-size:13px;cursor:pointer}
+.pilih-cepat button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.dlg-aksi{display:flex;gap:8px;justify-content:flex-end}
+.dlg-aksi .btn{padding:11px 16px}
+.kas-list{display:flex;flex-direction:column;margin-top:10px}
+.kas-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
+.kas-row .k{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.siaga{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:13px;color:var(--muted)}
+.siaga label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 /* Pesanan online di kasir */
 .toko-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .psn{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-top:10px;background:var(--bg)}
@@ -573,6 +588,12 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
               <p class="note">Dari web menu pelanggan. Terima dulu, buat dekat jam ambil, lalu <b>Bayar di kasir</b> saat pelanggan datang.</p></div>
             <div class="toko-ctl" id="tokoCtl"></div>
           </div>
+          <div class="siaga" id="siagaBaris">
+            <button class="btn small" type="button" id="bunyiAktif" hidden>🔔 Aktifkan bunyi</button>
+            <button class="btn small" type="button" id="bunyiDiam" hidden>Diamkan bunyi</button>
+            <label id="layarLabel" hidden><input type="checkbox" id="layarNyala"> Layar tetap menyala di tab Kasir</label>
+          </div>
+          <p class="msg err" id="pesananLewat" hidden></p>
           <div id="pesananList"></div>
           <details class="extra" id="stokBox">
             <summary>Stok terbatas (kue, menu spesial)</summary>
@@ -675,12 +696,35 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
           <button class="btn primary" type="button" id="qrisSelesai" style="padding:14px;font-size:15px">Uang sudah masuk, simpan</button>
         </div>
       </div>
+      <dialog class="dlg" id="kasDlg" aria-labelledby="kasJudul">
+        <form id="kasForm" novalidate>
+          <div><h2 id="kasJudul">Kas keluar / masuk</h2>
+            <p class="note">Hanya untuk menghitung isi laci. Belanja bahan tetap dicatat di tab Belanja.</p></div>
+          <div class="seg" id="kasArah"><button type="button" data-arah="keluar" aria-selected="true">Uang keluar</button><button type="button" data-arah="masuk" aria-selected="false">Uang masuk</button></div>
+          <label class="field"><span>Jumlah (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="kasNilai"></label>
+          <div class="pilih-cepat" id="kasCepat"></div>
+          <label class="field"><span>Untuk apa?</span><input type="text" id="kasAlasan" maxlength="120" placeholder="mis. beli es batu" autocomplete="off"></label>
+          <p class="msg" id="kasMsg" hidden></p>
+          <div class="dlg-aksi"><button class="btn" type="button" data-tutup-dlg>Batal</button><button class="btn primary" type="submit" id="kasSimpan">Simpan</button></div>
+        </form>
+      </dialog>
       <div class="sheet-bg" id="sheetBg" hidden></div>
       <div class="cartbar" id="cartBar" hidden>
         <div><b id="cbCount">0 item</b><span class="num" id="cbTotal">Rp 0</span></div>
         <button class="btn primary" type="button" id="cbBayar">Lihat pesanan &amp; bayar</button>
       </div>
     </section>
+
+    <!-- BERSAMA: alasan batal transaksi (dipakai di Kasir & Laporan) -->
+    <dialog class="dlg" id="batalDlg" aria-labelledby="batalJudul">
+      <form id="batalForm" novalidate>
+        <div><h2 id="batalJudul">Batalkan transaksi</h2><p class="note">Transaksi tidak dihitung di laporan, tapi tetap terlihat oleh pemilik bersama alasannya.</p></div>
+        <div class="pilih-cepat" id="batalCepat"></div>
+        <label class="field"><span>Alasan</span><input type="text" id="batalAlasan" maxlength="120" autocomplete="off" placeholder="Pilih di atas atau tulis sendiri"></label>
+        <p class="msg" id="batalMsg" hidden></p>
+        <div class="dlg-aksi"><button class="btn" type="button" data-tutup-dlg>Tidak jadi</button><button class="btn primary" type="submit" id="batalSimpan">Batalkan transaksi</button></div>
+      </form>
+    </dialog>
 
     <!-- PEMILIK: Laporan -->
     <section id="tab-laporan" hidden>
@@ -729,11 +773,17 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
         </div>
         <div class="panel card">
           <h2>Buka / tutup kasir</h2>
-          <p class="note">Selisih = uang fisik − (modal awal + penjualan tunai). Minus berarti uang di laci kurang.</p>
-          <div class="tbl-wrap"><table><thead><tr><th>Karyawan</th><th>Dibuka</th><th>Ditutup</th><th class="r">Modal</th><th class="r">Tunai tercatat</th><th class="r">Seharusnya</th><th class="r">Uang fisik</th><th class="r">Selisih</th></tr></thead><tbody id="lShift"></tbody></table></div>
+          <p class="note">Selisih = uang fisik − (modal awal + penjualan tunai + kas masuk − kas keluar). Minus berarti uang di laci kurang.</p>
+          <div class="tbl-wrap"><table><thead><tr><th>Karyawan</th><th>Dibuka</th><th>Ditutup</th><th class="r">Modal</th><th class="r">Tunai tercatat</th><th class="r">Kas masuk</th><th class="r">Kas keluar</th><th class="r">Seharusnya</th><th class="r">Uang fisik</th><th class="r">Selisih</th></tr></thead><tbody id="lShift"></tbody></table></div>
+        </div>
+        <div class="panel card" id="lKasPanel" hidden>
+          <h2>Kas keluar / masuk</h2>
+          <p class="note" id="lKasInfo"></p>
+          <div class="tbl-wrap"><table><thead><tr><th>Waktu</th><th>Oleh</th><th>Untuk apa</th><th class="r">Keluar</th><th class="r">Masuk</th></tr></thead><tbody id="lKas"></tbody></table></div>
         </div>
         <div class="panel card">
-          <h2>Daftar transaksi</h2>
+          <div class="sub"><h2>Daftar transaksi</h2><label class="note" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="lHanyaBatal"> Hanya yang dibatalkan</label></div>
+          <p class="note" id="lBatalInfo"></p>
           <div class="tbl-wrap"><table><thead><tr><th>Waktu</th><th>Oleh</th><th>Rincian</th><th>Saluran</th><th>Bayar</th><th class="r">Total</th><th class="r">Laba kotor</th><th></th></tr></thead><tbody id="lTrx"></tbody></table></div>
         </div>
       </div>
@@ -1289,7 +1339,7 @@ sb.auth.onAuthStateChange((event, session) => {
 
 async function boot(session){
   me = null;
-  if(!session){ show('screen-auth'); setAuthMode('masuk'); return; }
+  if(!session){ pesanan = []; renderSiaga(); aturLayar(); show('screen-auth'); setAuthMode('masuk'); return; }
   show('screen-loading');
   let {data, error} = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
   if(error && isNetErr(error)){ const c = lsGet('hpp-profil', null); if(c && c.id === session.user.id){ data = c; error = null; } }
@@ -1370,6 +1420,7 @@ function openTab(name){
   if(name === 'tim') loadTim();
   tutupQris();
   if(name === 'kasir'){ loadJual(); loadSaya(); refreshShift(); loadQris(); }
+  aturLayar();
   if(name === 'laporan') loadLaporan();
   if(name === 'biaya') loadBiaya();
 }
@@ -2288,11 +2339,60 @@ function bunyi(){
   try {
     const A = window.AudioContext || window.webkitAudioContext; if(!A) return;
     const c = bunyi.c || (bunyi.c = new A());
+    if(c.state !== 'running'){ c.resume().catch(() => {}); return; }   // belum diizinkan browser: jangan ditumpuk
     [0, 0.22].forEach(t => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, c.currentTime + t);
       g.gain.exponentialRampToValueAtTime(0.3, c.currentTime + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + t + 0.18);
       o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 0.2); });
   } catch(e){}
 }
+/* Browser baru mengizinkan bunyi setelah layar disentuh sekali; sentuhan pertama di mana saja mengaktifkannya */
+function siapkanBunyi(){
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if(!A) return;
+    const c = bunyi.c || (bunyi.c = new A());
+    if(c.state === 'running') renderSiaga(); else c.resume().then(renderSiaga).catch(() => {});
+  } catch(e){}
+}
+document.addEventListener('pointerdown', () => { if(!bunyi.c || bunyi.c.state !== 'running') siapkanBunyi(); });
+/* Selama ada pesanan belum dijawab: bunyi + getar diulang tiap 8 detik sampai Terima / Tolak / didiamkan.
+   Di akun pemilik hanya diulang saat tab Kasir terbuka, supaya tidak mengganggu waktu mengurus menu. */
+let bunyiDiam = new Set();   // id pesanan yang bunyinya didiamkan
+const pesananBerbunyi = () => pesanan.filter(x => x.status === 'menunggu' && !bunyiDiam.has(x.id));
+function ulangBunyi(){
+  if(!me || !pesananBerbunyi().length) return;
+  if(me.role === 'owner' && currentTab !== 'kasir') return;
+  bunyi(); if(navigator.vibrate && !(navigator.userActivation && !navigator.userActivation.hasBeenActive)) try { navigator.vibrate([250, 120, 250]); } catch(e){}
+}
+setInterval(ulangBunyi, 8000);
+$('bunyiAktif').addEventListener('click', () => { siapkanBunyi(); setTimeout(bunyi, 150); });
+$('bunyiDiam').addEventListener('click', () => { pesananBerbunyi().forEach(x => bunyiDiam.add(x.id)); if(navigator.vibrate) navigator.vibrate(0); renderSiaga(); });
+/* Layar tetap menyala selama tab Kasir terbuka (kalau didukung HP) */
+let kunciLayar = null, kunciProses = false;
+const maunyala = () => lsGet('hpp-layar', true) && currentTab === 'kasir' && !!me && document.visibilityState === 'visible';
+async function aturLayar(){
+  if(!('wakeLock' in navigator) || kunciProses) return;
+  kunciProses = true;
+  try {
+    if(maunyala() && !kunciLayar){
+      const k = await navigator.wakeLock.request('screen');
+      k.addEventListener('release', () => { if(kunciLayar === k) kunciLayar = null; });
+      kunciLayar = k;
+    } else if(!maunyala() && kunciLayar){ const k = kunciLayar; kunciLayar = null; await k.release(); }
+  } catch(e){} finally { kunciProses = false; }
+}
+$('layarNyala').addEventListener('change', e => { lsSet('hpp-layar', e.target.checked); aturLayar(); });
+document.addEventListener('visibilitychange', () => { aturLayar(); if(document.visibilityState === 'visible' && me && pesananTimer) loadPesanan(); });
+setInterval(aturLayar, 20000);
+function renderSiaga(){
+  const n = pesananBerbunyi().length, jml = me ? pesanan.filter(x => x.status === 'menunggu').length : 0;
+  $('bunyiDiam').hidden = !n;
+  $('bunyiAktif').hidden = !(window.AudioContext || window.webkitAudioContext) || !!(bunyi.c && bunyi.c.state === 'running');
+  $('layarLabel').hidden = !('wakeLock' in navigator);
+  $('layarNyala').checked = !!lsGet('hpp-layar', true);
+  if(!renderSiaga.judul) renderSiaga.judul = document.title;
+  document.title = jml ? `(${jml}) Pesanan baru · ${renderSiaga.judul}` : renderSiaga.judul;
+}
+const umurMenit = x => Math.max(0, Math.floor((Date.now() - new Date(x.created_at)) / 60000));
 async function loadPesanan(){
   if(!me || !pesananReady || !navigator.onLine) return;
   // Pesanan kemarin yang tidak diambil -> batal otomatis (stoknya kembali); cukup sekali per hari per perangkat
@@ -2300,14 +2400,20 @@ async function loadPesanan(){
     const r = await sb.rpc('bersihkan_pesanan_lama');
     if(!r.error){ loadPesanan.bersih = hariIni(); if(r.data > 0) toast(`${r.data} pesanan online kemarin yang tidak diambil dibatalkan otomatis`, 'info'); }
   }
-  const [p, t, h, st] = await Promise.all([
+  // Ada yang belum dijawab terlalu lama: minta database membatalkannya (batas waktunya di pesan-online.sql)
+  if(pesanan.some(x => x.status === 'menunggu' && umurMenit(x) >= 20)) await sb.rpc('batalkan_tak_dijawab');
+  const [p, t, h, st, lw] = await Promise.all([
     sb.from('pesanan').select('*').in('status', ['menunggu','diterima','siap']).order('created_at'),
     sb.from('status_toko').select('*').eq('id', 1).maybeSingle(),
     sb.from('menu_habis').select('kunci,tanggal'),
     sb.from('stok_menu').select('kunci,sisa'),
+    sb.from('pesanan').select('kode,nama,created_at').eq('tanggal', hariIni()).eq('status', 'batal').like('alasan', 'Tidak dijawab%').order('created_at'),
   ]);
+  if(!me) return;   // keluar saat data masih dimuat
   if(p.error){ if(/pesanan|relation|schema cache|does not exist/i.test(p.error.message || '')){ pesananReady = false; $('pesananPanel').hidden = true; } return; }
   pesanan = p.data || []; tokoStatus = t.data || null;
+  const lewat = lw && !lw.error && lw.data || [];
+  msg($('pesananLewat'), 'err', lewat.length ? `Tidak sempat dijawab hari ini (dibatalkan otomatis): ${lewat.map(x => `${x.kode} ${x.nama} ${jam(x.created_at)}`).join(', ')}` : '');
   if(!st.error){ const lama = JSON.stringify([...stokMap]); stokMap = new Map((st.data || []).map(x => [x.kunci, x.sisa])); if(lama !== JSON.stringify([...stokMap]) && currentTab === 'kasir') renderGrid(); }
   habisSet = new Set((h.data || []).filter(x => x.tanggal === hariIni()).map(x => x.kunci));
   const baru = pesanan.filter(x => x.status === 'menunggu' && !sudahBunyi.has(x.id));
@@ -2318,6 +2424,7 @@ async function loadPesanan(){
 function mulaiPollingPesanan(){ clearInterval(pesananTimer); loadPesanan(); pesananTimer = setInterval(loadPesanan, 15000); }
 function renderPesanan(){
   $('pesananPanel').hidden = !pesananReady;
+  renderSiaga();
   const menunggu = pesanan.filter(x => x.status === 'menunggu').length;
   const jml = $('pesananJml'); jml.hidden = !menunggu; jml.textContent = menunggu + ' baru';
   const tab = document.querySelector('#tabs [data-tab="kasir"] .lbl');
@@ -2334,7 +2441,7 @@ function renderPesanan(){
   $('pesananList').innerHTML = urut.length ? urut.map(x => `<div class="psn ${x.status}">
       <div class="psn-head"><div><span class="kode">${esc(x.kode)}</span> · <b>${esc(x.nama)}</b> <span class="chip ${x.status === 'menunggu' ? 'warn' : x.status === 'siap' ? 'good' : 'neutral'}">${{menunggu:'Menunggu', diterima:'Diterima', siap:'Siap diambil'}[x.status]}</span></div>
         <b class="num">${rp(x.total)}</b></div>
-      <div class="note" style="color:var(--fg)">${esc(x.cara)} · ambil ${esc(x.ambil_teks || 'secepatnya')} · masuk ${jam(x.created_at)}</div>
+      <div class="note" style="color:var(--fg)">${esc(x.cara)} · ambil ${esc(x.ambil_teks || 'secepatnya')} · masuk ${jam(x.created_at)}${x.status === 'menunggu' && umurMenit(x) >= 2 ? ` · <b style="color:var(--bad)">menunggu ${umurMenit(x)} menit</b>` : ''}</div>
       <ul class="psn-items">${(x.items || []).map(i => `<li>${i.qty}× ${esc(i.nama)}${habisSet.has(i.kunci) ? ' <span class="chip bad">habis</span>' : ''}</li>`).join('')}</ul>
       ${x.catatan ? `<div class="note" style="color:var(--fg)">Catatan: ${esc(x.catatan)}</div>` : ''}
       <div class="psn-aksi">${x.status === 'menunggu'
@@ -2353,9 +2460,11 @@ function renderPesanan(){
   // Menu habis
   $('habisList').innerHTML = jual.length ? jual.map(j => `<button type="button" data-habis="${esc(j.kunci)}" aria-pressed="${habisSet.has(j.kunci)}">${esc(j.nama)}</button>`).join('') : '<span class="note">Menu belum dimuat.</span>';
 }
-async function ubahPesanan(id, isi){
-  const {error} = await sb.from('pesanan').update({...isi, updated_at: new Date().toISOString()}).eq('id', id);
+// Hanya pesanan yang masih aktif yang diubah: pelanggan bisa saja membatalkan (atau batal otomatis) sesaat sebelumnya
+async function ubahPesanan(id, isi, dari = ['menunggu','diterima','siap']){
+  const {data, error} = await sb.from('pesanan').update({...isi, updated_at: new Date().toISOString()}).eq('id', id).in('status', dari).select('id');
   if(error){ toast(terjemah(error), 'err'); return false; }
+  if(!data || !data.length){ toast('Pesanan ini sudah dibatalkan atau sudah diubah dari perangkat lain.', 'err'); return false; }
   return true;
 }
 // Setelah transaksi tersimpan: stok di layar ikut berkurang (database menguranginya sendiri lewat trigger)
@@ -2392,8 +2501,8 @@ $('pesananPanel').addEventListener('click', async e => {
   const b = e.target.closest('[data-psn]'); if(!b) return;
   const x = pesanan.find(p => p.id === b.dataset.id); if(!x) return;
   const a = b.dataset.psn;
-  if(a === 'terima'){ if(await ubahPesanan(x.id, {status:'diterima'})) toast(`✓ ${x.kode} diterima. Buat dekat jam ambil: ${x.ambil_teks || 'secepatnya'}`, 'ok'); }
-  else if(a === 'siap'){ if(await ubahPesanan(x.id, {status:'siap'})) toast(`✓ ${x.kode} siap diambil`, 'ok'); }
+  if(a === 'terima'){ if(await ubahPesanan(x.id, {status:'diterima'}, ['menunggu'])) toast(`✓ ${x.kode} diterima. Buat dekat jam ambil: ${x.ambil_teks || 'secepatnya'}`, 'ok'); }
+  else if(a === 'siap'){ if(await ubahPesanan(x.id, {status:'siap'}, ['diterima'])) toast(`✓ ${x.kode} siap diambil`, 'ok'); }
   else if(a === 'lunas'){ if(!confirm(`Tandai ${x.kode} sudah dibayar? Pastikan transaksinya sudah dicatat di kasir.`)) return; if(await ubahPesanan(x.id, {status:'selesai'})) toast(`✓ ${x.kode} selesai`, 'ok'); }
   else if(a === 'tolak' || a === 'batal'){
     const al = prompt(a === 'tolak' ? `Alasan menolak ${x.kode} (tampil ke pelanggan):` : `Alasan membatalkan ${x.kode}:`, a === 'tolak' ? 'Maaf, menu sedang habis' : 'Tidak diambil');
@@ -2508,15 +2617,40 @@ async function loadSaya(){
     per.map(x => `<div class="stat"><b class="num">${rp(sum(x.rows))}</b><span>${x.mt} (${x.rows.length})</span></div>`).join('');
   $('sayaBody').innerHTML = data.length ? data.map(r => `<tr class="${r.batal?'void':''}">
       <td class="num">${jam(r.waktu)}</td><td>${esc(r.rincian || '')}${+r.diskon ? `<div class="note">diskon ${rp(r.diskon)}</div>` : ''}</td><td>${esc(r.saluran || '')}</td><td>${r.metode}</td><td class="r num">${rp(r.total)}</td>
-      <td style="text-align:right">${r.batal ? '<span class="chip bad" style="text-decoration:none">Batal</span>' : `<button class="btn small" type="button" data-batal-trx="${r.id}">Batalkan</button>`}</td></tr>`).join('')
+      <td style="text-align:right">${r.batal ? tandaBatal(r) : `<button class="btn small" type="button" data-batal-trx="${r.id}" data-batal-ket="${esc((r.rincian || '') + ' · ' + rp(r.total))}">Batalkan</button>`}</td></tr>`).join('')
     : `<tr><td colspan="6" class="empty">Belum ada transaksi hari ini.</td></tr>`;
 }
-async function batalkanTrx(id, after){
-  if(!confirm('Batalkan transaksi #' + id + '? Transaksi tidak dihitung di laporan.')) return;
-  const {error} = await sb.rpc('batalkan_penjualan', {p_id: +id});
-  if(error) alert(terjemah(error)); else { after(); refreshShift(); }
+const tandaBatal = r => `<span class="chip bad" style="text-decoration:none">Batal</span>${r.alasan_batal ? `<div class="note" style="max-width:200px;margin-left:auto">${esc(r.alasan_batal)}${r.dibatalkan_nama ? ' · oleh ' + esc(r.dibatalkan_nama) : ''}</div>` : ''}`;
+const ALASAN_BATAL = ['Salah input menu', 'Salah cara bayar', 'Pelanggan batal', 'Tercatat dua kali'];
+let batalAktif = null;
+function batalkanTrx(id, after, ket){
+  batalAktif = {id: +id, after};
+  $('batalJudul').textContent = 'Batalkan transaksi #' + id;
+  $('batalAlasan').value = ''; msg($('batalMsg'), 'info', ket || '');
+  $('batalCepat').innerHTML = ALASAN_BATAL.map(a => `<button type="button" data-cepat="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('');
+  $('batalSimpan').disabled = false;
+  $('batalDlg').showModal();
 }
-$('sayaBody').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadSaya); });
+// Pilihan cepat mengisi kotak teks di bawahnya
+function pasangCepat(kotak, input, pesan){
+  const bersih = () => { if($(pesan).classList.contains('err')) msg($(pesan), 'info', ''); };
+  $(kotak).addEventListener('click', e => { const b = e.target.closest('[data-cepat]'); if(!b) return; $(input).value = b.dataset.cepat; tandaiCepat(kotak, input); bersih(); });
+  $(input).addEventListener('input', () => { tandaiCepat(kotak, input); bersih(); });
+}
+function tandaiCepat(kotak, input){ $(kotak).querySelectorAll('[data-cepat]').forEach(x => x.setAttribute('aria-pressed', x.dataset.cepat === $(input).value)); }
+pasangCepat('batalCepat', 'batalAlasan', 'batalMsg');
+document.addEventListener('click', e => { const b = e.target.closest('[data-tutup-dlg]'); if(b) b.closest('dialog').close(); });
+$('batalForm').addEventListener('submit', async e => {
+  e.preventDefault(); if(!batalAktif || $('batalSimpan').disabled) return;
+  const alasan = $('batalAlasan').value.trim(), {id, after} = batalAktif;
+  if(alasan.length < 3){ msg($('batalMsg'), 'err', 'Pilih atau tulis alasannya dulu.'); $('batalAlasan').focus(); return; }
+  $('batalSimpan').disabled = true;
+  const {error} = await sb.rpc('batalkan_penjualan', {p_id: id, p_alasan: alasan});
+  $('batalSimpan').disabled = false;
+  if(error){ msg($('batalMsg'), 'err', /schema cache|could not find/i.test(error.message || '') ? 'Pemilik perlu menjalankan kasir-lanjutan.sql di Supabase dulu.' : terjemah(error)); return; }
+  batalAktif = null; $('batalDlg').close(); toast(`Transaksi #${id} dibatalkan`, 'info'); after(); refreshShift(); loadPesanan();
+});
+$('sayaBody').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadSaya, b.dataset.batalKet); });
 
 /* ---------- Buka / tutup kasir ---------- */
 async function refreshShift(){
@@ -2531,11 +2665,37 @@ async function refreshShift(){
       <div class="shift-form"><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="sModal" placeholder="Modal awal (Rp)" aria-label="Modal awal di laci" style="width:160px"><button class="btn primary" type="button" id="sBuka">Buka kasir</button></div></div>`;
     return;
   }
-  const harus = +data.modal_awal + +data.tunai;
-  el.innerHTML = `<div class="shift-line"><div class="info"><span class="dotlive" aria-hidden="true"></span><b>Kasir buka ${jam(data.dibuka_pada)}</b><span>Seharusnya di laci <b class="num">${rp(harus)}</b></span><button class="link" type="button" id="sDetail">Rincian</button></div>
-      <div class="shift-form" id="sTutupBox"><button class="btn" type="button" id="sTutupMulai">Tutup kasir</button></div></div>
-    <div class="stats" id="sStats" hidden style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal_awal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>tunai masuk</span></div><div class="stat"><b class="num">${rp(harus)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${data.transaksi}</b><span>transaksi</span></div></div>`;
+  const adaKas = Array.isArray(data.kas), km = +data.kas_masuk || 0, kk = +data.kas_keluar || 0;   // tanpa kasir-lanjutan.sql: kas disembunyikan
+  const harus = +data.modal_awal + +data.tunai + km - kk;
+  kasSeharusnya = harus;
+  const rinciBuka = !!($('sStats') && !$('sStats').hidden);   // rincian yang sedang dibuka tetap terbuka
+  el.innerHTML = `<div class="shift-line"><div class="info"><span class="dotlive" aria-hidden="true"></span><b>Kasir buka ${jam(data.dibuka_pada)}</b><span>Seharusnya di laci <b class="num">${rp(harus)}</b></span><button class="link" type="button" id="sDetail">${rinciBuka ? 'Sembunyikan' : 'Rincian'}</button></div>
+      <div class="shift-form" id="sTutupBox">${adaKas ? '<button class="btn" type="button" id="sKas">Kas keluar / masuk</button>' : ''}<button class="btn" type="button" id="sTutupMulai">Tutup kasir</button></div></div>
+    <div id="sStats" ${rinciBuka ? '' : 'hidden'}><div class="stats" style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal_awal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>penjualan tunai</span></div>${km ? `<div class="stat"><b class="num">+ ${rp(km)}</b><span>kas masuk</span></div>` : ''}${kk ? `<div class="stat"><b class="num">− ${rp(kk)}</b><span>kas keluar</span></div>` : ''}<div class="stat"><b class="num">${rp(harus)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${data.transaksi}</b><span>transaksi</span></div></div>
+    ${adaKas && data.kas.length ? `<div class="kas-list">${data.kas.map(k => `<div class="kas-row"><span class="num muted">${jam(k.waktu)}</span><span class="k">${esc(k.alasan)}</span><b class="num" style="color:${k.arah === 'keluar' ? 'var(--bad)' : 'var(--good)'}">${k.arah === 'keluar' ? '−' : '+'} ${rp(k.nilai)}</b><button class="link" type="button" data-batal-kas="${k.id}" data-ket="${esc(k.alasan)} ${rp(k.nilai)}">Salah catat</button></div>`).join('')}</div>` : ''}</div>`;
 }
+let kasSeharusnya = 0, kasArah = 'keluar';
+const KAS_CEPAT = {keluar: ['Beli es batu', 'Beli bahan', 'Beli gas', 'Setor ke pemilik'], masuk: ['Tambah uang kembalian', 'Pengembalian belanja']};
+function setKasArah(a){
+  kasArah = a; pilihSeg($('kasArah'), $('kasArah').querySelector(`[data-arah="${a}"]`));
+  $('kasCepat').innerHTML = KAS_CEPAT[a].map(x => `<button type="button" data-cepat="${esc(x)}" aria-pressed="false">${esc(x)}</button>`).join('');
+  $('kasAlasan').placeholder = a === 'keluar' ? 'mis. beli es batu' : 'mis. tambah uang kembalian';
+  tandaiCepat('kasCepat', 'kasAlasan');
+}
+$('kasArah').addEventListener('click', e => { const b = e.target.closest('[data-arah]'); if(b && b.dataset.arah !== kasArah){ $('kasAlasan').value = ''; setKasArah(b.dataset.arah); } });
+pasangCepat('kasCepat', 'kasAlasan', 'kasMsg');
+$('kasForm').addEventListener('submit', async e => {
+  e.preventDefault(); if($('kasSimpan').disabled) return;
+  const nilai = num($('kasNilai').value), alasan = $('kasAlasan').value.trim(), m = $('kasMsg');
+  if(!(nilai > 0)){ msg(m, 'err', 'Isi jumlah uangnya dulu.'); $('kasNilai').focus(); return; }
+  if(alasan.length < 3){ msg(m, 'err', 'Isi untuk apa uangnya.'); $('kasAlasan').focus(); return; }
+  if(kasArah === 'keluar' && nilai > kasSeharusnya && !confirm(`Uang keluar ${rp(nilai)} lebih besar dari yang seharusnya ada di laci (${rp(kasSeharusnya)}). Tetap simpan?`)) return;
+  $('kasSimpan').disabled = true;
+  const {error} = await sb.rpc('catat_kas', {p_arah: kasArah, p_nilai: nilai, p_alasan: alasan});
+  $('kasSimpan').disabled = false;
+  if(error){ msg(m, 'err', isNetErr(error) ? 'Internet putus. Catat lagi setelah tersambung.' : terjemah(error)); return; }
+  $('kasDlg').close(); toast(`✓ Kas ${kasArah} ${rp(nilai)} tercatat`, 'ok'); refreshShift();
+});
 $('shiftBar').addEventListener('click', async e => {
   const t = e.target.closest('button'); if(!t) return;
   if(t.id === 'sBuka'){
@@ -2549,6 +2709,13 @@ $('shiftBar').addEventListener('click', async e => {
       <label class="field"><span>Catatan (opsional)</span><input type="text" id="sCatatan"></label>
       <button class="btn primary" type="button" id="sTutup">Simpan & tutup</button><button class="btn" type="button" id="sBatalTutup">Batal</button>`;
     $('sFisik').focus();
+  } else if(t.id === 'sKas'){
+    $('kasNilai').value = ''; $('kasAlasan').value = ''; msg($('kasMsg'), 'info', ''); setKasArah('keluar');
+    $('kasDlg').showModal(); $('kasNilai').focus();
+  } else if(t.dataset.batalKas){
+    if(!confirm(`Batalkan catatan kas "${t.dataset.ket}"?`)) return;
+    const {error} = await sb.rpc('batalkan_kas', {p_id: +t.dataset.batalKas});
+    if(error) alert(terjemah(error)); else refreshShift();
   } else if(t.id === 'sDetail'){
     $('sStats').hidden = !$('sStats').hidden;
     t.textContent = $('sStats').hidden ? 'Rincian' : 'Sembunyikan';
@@ -2561,7 +2728,7 @@ $('shiftBar').addEventListener('click', async e => {
     if(error){ alert(terjemah(error)); t.disabled = false; return; }
     const sel = +data.selisih, warna = sel === 0 ? 'var(--good)' : sel > 0 ? 'var(--warn)' : 'var(--bad)';
     $('shiftBar').innerHTML = `<div class="shift"><div><h2>Kasir ditutup</h2>
-        <div class="stats" style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>penjualan tunai</span></div><div class="stat"><b class="num">${rp(data.seharusnya)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${rp(data.uang_fisik)}</b><span>uang fisik</span></div><div class="stat"><b class="num" style="color:${warna}">${sel === 0 ? 'Pas' : (sel > 0 ? 'Lebih ' : 'Kurang ') + rp(Math.abs(sel))}</b><span>selisih</span></div></div></div>
+        <div class="stats" style="margin-top:10px"><div class="stat"><b class="num">${rp(data.modal)}</b><span>modal awal</span></div><div class="stat"><b class="num">${rp(data.tunai)}</b><span>penjualan tunai</span></div>${+data.kas_masuk ? `<div class="stat"><b class="num">+ ${rp(data.kas_masuk)}</b><span>kas masuk</span></div>` : ''}${+data.kas_keluar ? `<div class="stat"><b class="num">− ${rp(data.kas_keluar)}</b><span>kas keluar</span></div>` : ''}<div class="stat"><b class="num">${rp(data.seharusnya)}</b><span>seharusnya di laci</span></div><div class="stat"><b class="num">${rp(data.uang_fisik)}</b><span>uang fisik</span></div><div class="stat"><b class="num" style="color:${warna}">${sel === 0 ? 'Pas' : (sel > 0 ? 'Lebih ' : 'Kurang ') + rp(Math.abs(sel))}</b><span>selisih</span></div></div></div>
       <div class="shift-form"><button class="btn primary" type="button" id="sOk">Selesai</button></div></div>`;
   }
 });
@@ -2604,7 +2771,7 @@ function rentang(){
 $('lPeriode').addEventListener('change', () => { if($('lPeriode').value !== 'custom'){ const [a,b] = rentang(); $('lDari').value = a; $('lSampai').value = b; loadLaporan(); } });
 ['lDari','lSampai'].forEach(id => $(id).addEventListener('change', () => { $('lPeriode').value = 'custom'; }));
 $('lMuat').addEventListener('click', loadLaporan);
-$('lTrx').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadLaporan); });
+$('lTrx').addEventListener('click', e => { const b = e.target.closest('[data-batal-trx]'); if(b) batalkanTrx(b.dataset.batalTrx, loadLaporan, b.dataset.batalKet); });
 async function fetchAll(build){
   let out = [], from = 0;
   for(;;){ const {data, error} = await build().range(from, from + 999); if(error) throw error; out = out.concat(data); if(data.length < 1000) break; from += 1000; }
@@ -2617,13 +2784,15 @@ async function loadLaporan(){
   $('lDari').value = dari; $('lSampai').value = sampai;
   msg($('lMsg'),'info','Memuat laporan…');
   try {
-    const [trx, by, sh] = await Promise.all([
-      fetchAll(() => sb.from('penjualan').select('id,waktu,tanggal,metode,saluran,subtotal,diskon,komisi,total,total_hpp,batal,catatan,dibuat_oleh,profiles(nama),penjualan_item(nama,qty,harga,hpp)').gte('tanggal', dari).lte('tanggal', sampai).order('waktu', {ascending:false})),
+    const [trx, by, sh, kas] = await Promise.all([
+      fetchAll(() => sb.from('penjualan').select('*,profiles(nama),penjualan_item(nama,qty,harga,hpp)').gte('tanggal', dari).lte('tanggal', sampai).order('waktu', {ascending:false})),
       fetchAll(() => sb.from('biaya').select('nilai').gte('tanggal', dari).lte('tanggal', sampai)),
       fetchAll(() => sb.from('shift').select('*, profiles(nama)').gte('dibuka_pada', dari + 'T00:00:00+08:00').lte('dibuka_pada', sampai + 'T23:59:59+08:00').order('dibuka_pada', {ascending:false})).catch(() => null),
+      fetchAll(() => sb.from('kas_gerak').select('*').gte('waktu', dari + 'T00:00:00+08:00').lte('waktu', sampai + 'T23:59:59.999+08:00').order('waktu', {ascending:false})).catch(() => null),
     ]);
     msg($('lMsg'),'info','');
     renderLaporan(trx, by, sh, dari, sampai);
+    renderKas(kas);
     await muatBonusSetelan();
     renderBonus(trx.filter(t => !t.batal), dari, sampai);
   } catch(err){ msg($('lMsg'),'err','Gagal memuat laporan: ' + terjemah(err) + '. Pastikan penjualan.sql dan fitur-lanjutan.sql sudah dijalankan.'); }
@@ -2661,23 +2830,40 @@ function renderLaporan(trx, by, sh, dari, sampai){
 
   $('lMetode').innerHTML = ['Tunai','QRIS','Transfer','Aplikasi'].map(mt => { const ts = ok.filter(t => t.metode === mt); return `<tr><td>${mt === 'Aplikasi' ? 'Lewat aplikasi ojol' : mt}</td><td class="r num">${ts.length}</td><td class="r num">${rp(S(ts, t => t.total))}</td></tr>`; }).join('');
 
-  if(sh === null) $('lShift').innerHTML = `<tr><td colspan="8" class="empty">Data buka/tutup kasir belum tersedia. Jalankan fitur-lanjutan.sql.</td></tr>`;
-  else $('lShift').innerHTML = sh.length ? sh.map(s => { const harus = s.ditutup_pada ? +s.modal_awal + +s.tunai_tercatat : null, sel = s.selisih == null ? null : +s.selisih;
+  if(sh === null) $('lShift').innerHTML = `<tr><td colspan="10" class="empty">Data buka/tutup kasir belum tersedia. Jalankan fitur-lanjutan.sql.</td></tr>`;
+  else $('lShift').innerHTML = sh.length ? sh.map(s => { const km = +s.kas_masuk || 0, kk = +s.kas_keluar || 0, harus = s.ditutup_pada ? +s.modal_awal + +s.tunai_tercatat + km - kk : null, sel = s.selisih == null ? null : +s.selisih;
       return `<tr><td>${esc((s.profiles && s.profiles.nama) || '–')}</td><td style="white-space:nowrap">${tgl(ymd(s.dibuka_pada))} ${jam(s.dibuka_pada)}</td>
         <td style="white-space:nowrap">${s.ditutup_pada ? jam(s.ditutup_pada) : '<span class="chip good">Masih buka</span>'}</td>
-        <td class="r num">${rp(s.modal_awal)}</td><td class="r num">${s.ditutup_pada ? rp(s.tunai_tercatat) : '–'}</td><td class="r num">${harus == null ? '–' : rp(harus)}</td>
+        <td class="r num">${rp(s.modal_awal)}</td><td class="r num">${s.ditutup_pada ? rp(s.tunai_tercatat) : '–'}</td><td class="r num">${s.ditutup_pada && km ? rp(km) : '–'}</td><td class="r num">${s.ditutup_pada && kk ? rp(kk) : '–'}</td><td class="r num">${harus == null ? '–' : rp(harus)}</td>
         <td class="r num">${s.ditutup_pada ? rp(s.uang_fisik) : '–'}</td>
         <td class="r num" style="font-weight:600;color:${sel == null ? 'inherit' : sel === 0 ? 'var(--good)' : sel > 0 ? 'var(--warn)' : 'var(--bad)'}">${sel == null ? '–' : sel === 0 ? 'Pas' : (sel > 0 ? '+' : '−') + rp(Math.abs(sel))}</td></tr>`; }).join('')
-    : `<tr><td colspan="8" class="empty">Belum ada buka/tutup kasir di periode ini.</td></tr>`;
+    : `<tr><td colspan="10" class="empty">Belum ada buka/tutup kasir di periode ini.</td></tr>`;
 
-  const show = trx.slice(0, 300);
+  trxTerakhir = trx; renderTrx();
+}
+let trxTerakhir = [];
+$('lHanyaBatal').addEventListener('change', renderTrx);
+function renderTrx(){
+  const S = (arr, f) => arr.reduce((s,x) => s + +f(x), 0), labaT = t => +t.total - +(t.komisi || 0) - +t.total_hpp;
+  const bt = trxTerakhir.filter(t => t.batal), perOrang = new Map();
+  bt.forEach(t => { const n = (t.profiles && t.profiles.nama) || '–'; perOrang.set(n, (perOrang.get(n) || 0) + 1); });
+  $('lBatalInfo').textContent = bt.length ? `${bt.length} transaksi dibatalkan · ${rp(S(bt, t => t.total))} · transaksi milik: ${[...perOrang].map(([n, q]) => `${n} ${q}×`).join(', ')}` : 'Tidak ada transaksi yang dibatalkan di periode ini.';
+  const hanya = $('lHanyaBatal').checked, trx = hanya ? bt : trxTerakhir, show = trx.slice(0, 300);
   $('lTrx').innerHTML = show.length ? show.map(t => `<tr class="${t.batal?'void':''}">
       <td style="white-space:nowrap">${tgl(t.tanggal)} ${jam(t.waktu)}</td><td>${esc((t.profiles && t.profiles.nama) || '–')}</td>
       <td>${esc((t.penjualan_item || []).map(i => i.qty + '× ' + i.nama).join(', '))}${+t.diskon ? `<div class="note">diskon ${rp(t.diskon)}</div>` : ''}${t.catatan ? `<div class="note">${esc(t.catatan)}</div>` : ''}</td>
       <td>${esc(t.saluran || '')}</td><td>${t.metode}</td><td class="r num">${rp(t.total)}</td><td class="r num">${rp(labaT(t))}</td>
-      <td style="text-align:right">${t.batal ? '<span class="chip bad" style="text-decoration:none">Batal</span>' : `<button class="btn small" type="button" data-batal-trx="${t.id}">Batalkan</button>`}</td></tr>`).join('')
+      <td style="text-align:right">${t.batal ? tandaBatal(t) : `<button class="btn small" type="button" data-batal-trx="${t.id}" data-batal-ket="${esc((t.penjualan_item || []).map(i => i.qty + '× ' + i.nama).join(', ') + ' · ' + rp(t.total))}">Batalkan</button>`}</td></tr>`).join('')
     + (trx.length > 300 ? `<tr><td colspan="8" class="note">Menampilkan 300 transaksi terbaru dari ${trx.length}.</td></tr>` : '')
-    : `<tr><td colspan="8" class="empty">Belum ada transaksi di periode ini.</td></tr>`;
+    : `<tr><td colspan="8" class="empty">${hanya ? 'Tidak ada transaksi yang dibatalkan.' : 'Belum ada transaksi di periode ini.'}</td></tr>`;
+}
+function renderKas(kas){
+  $('lKasPanel').hidden = !kas;
+  if(!kas) return;
+  const ok = kas.filter(k => !k.batal), S = a => ok.filter(k => k.arah === a).reduce((s,k) => s + +k.nilai, 0);
+  $('lKasInfo').textContent = `Keluar ${rp(S('keluar'))} · masuk ${rp(S('masuk'))}. Hanya untuk isi laci, tidak mengurangi laba. Biaya seperti gas tetap dicatat di tab Biaya.`;
+  $('lKas').innerHTML = kas.length ? kas.map(k => `<tr class="${k.batal ? 'void' : ''}"><td style="white-space:nowrap">${tgl(ymd(k.waktu))} ${jam(k.waktu)}</td><td>${esc(k.dibuat_nama || '–')}</td><td>${esc(k.alasan)}${k.batal ? ' <span class="chip neutral" style="text-decoration:none">salah catat</span>' : ''}</td><td class="r num">${k.arah === 'keluar' ? rp(k.nilai) : '–'}</td><td class="r num">${k.arah === 'masuk' ? rp(k.nilai) : '–'}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">Belum ada kas keluar / masuk di periode ini.</td></tr>';
 }
 
 /* ---------- Bonus karyawan ----------
