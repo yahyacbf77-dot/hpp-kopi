@@ -129,6 +129,14 @@ tbody tr:last-child td{border-bottom:0}
 
 .tetap-box{background:var(--accent-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .tetap-list{display:flex;flex-wrap:wrap;gap:8px 18px}
+/* Layar QRIS: selalu putih supaya mudah dipindai, juga di mode gelap */
+.qris-layar:not([hidden]){position:fixed;inset:0;z-index:80;background:rgba(20,14,10,.7);display:grid;place-items:center;padding:12px;overflow:auto}
+.qris-kartu{background:#fff;color:#231a14;width:min(460px,100%);border-radius:18px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.qris-kartu p{margin:0;font-size:13px;line-height:1.45}
+.qris-total{font-family:var(--f-display);font-size:34px;line-height:1;font-variant-numeric:lining-nums tabular-nums}
+.qris-wadah{display:flex;justify-content:center}
+.qris-wadah img{max-width:100%;max-height:62vh;object-fit:contain}
+.qris-kartu .btn.primary{background:#9a5b25;color:#fff;border-color:#9a5b25}
 /* Pesanan online di kasir */
 .toko-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .psn{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-top:10px;background:var(--bg)}
@@ -615,6 +623,10 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
                 <button type="button" data-m="Transfer" aria-selected="false">Transfer</button>
               </div>
             </div>
+            <div id="kQrisBox" hidden>
+              <button class="btn" type="button" id="kQrisLihat" style="width:100%;padding:12px">Tampilkan QRIS</button>
+              <p class="note" id="kQrisNote" hidden></p>
+            </div>
             <div id="kTunaiBox" style="display:flex;flex-direction:column;gap:6px">
               <label class="field"><span>Uang diterima (Rp)</span><input type="text" inputmode="numeric" class="uang" autocomplete="off" id="kBayar" placeholder="opsional"></label>
               <div class="kv" id="kKembaliRow" hidden><span>Kembalian</span><b class="num" id="kKembali"></b></div>
@@ -643,6 +655,25 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
           <div class="sub"><button class="btn" type="button" id="salTambah">+ Saluran</button><button class="btn primary" type="button" id="salSimpan">Simpan pengaturan</button></div>
           <p class="msg" id="salMsg" hidden></p>
         </details>
+        <details class="panel card" id="qrisSet" hidden>
+          <summary><b>Gambar QRIS</b> <span class="note">(khusus pemilik)</span></summary>
+          <p class="note">Muncul di kasir saat cara bayar QRIS dipilih. Hanya pemilik yang bisa mengganti. Pastikan nama merchant di gambar benar.</p>
+          <img id="qrisPratinjau" alt="QRIS yang tersimpan" hidden style="max-width:220px;border:1px solid var(--line);border-radius:10px;background:#fff">
+          <div class="sub" style="justify-content:flex-start">
+            <label class="btn primary" style="cursor:pointer">Pilih gambar QRIS<input type="file" id="qrisFile" accept="image/png,image/jpeg,image/webp" style="position:absolute;width:1px;height:1px;opacity:0"></label>
+            <button class="btn ghost" type="button" id="qrisHapus" hidden>Hapus QRIS</button>
+          </div>
+          <p class="msg" id="qrisMsg" hidden></p>
+        </details>
+      </div>
+      <div class="qris-layar" id="qrisLayar" role="dialog" aria-modal="true" aria-label="Pembayaran QRIS" hidden>
+        <div class="qris-kartu">
+          <div class="sub"><span>Total yang dibayar</span><button class="btn ghost" type="button" id="qrisTutup" aria-label="Tutup" style="color:#231a14">✕</button></div>
+          <b class="qris-total num" id="qrisTotal"></b>
+          <div class="qris-wadah"><img id="qrisGambar" alt="QRIS YA Coffee and Cake"></div>
+          <p>Minta pelanggan mengetik nominal yang sama. <b>Cek uang masuk di aplikasi merchant</b>, jangan hanya dari tangkapan layar.</p>
+          <button class="btn primary" type="button" id="qrisSelesai" style="padding:14px;font-size:15px">Uang sudah masuk, simpan</button>
+        </div>
       </div>
       <div class="sheet-bg" id="sheetBg" hidden></div>
       <div class="cartbar" id="cartBar" hidden>
@@ -1337,7 +1368,8 @@ function openTab(name){
   if(name === 'produk') renderEditor();
   if(name === 'belanja'){ renderBelanjaForm(); loadBelanja(); }
   if(name === 'tim') loadTim();
-  if(name === 'kasir'){ loadJual(); loadSaya(); refreshShift(); }
+  tutupQris();
+  if(name === 'kasir'){ loadJual(); loadSaya(); refreshShift(); loadQris(); }
   if(name === 'laporan') loadLaporan();
   if(name === 'biaya') loadBiaya();
 }
@@ -2148,6 +2180,7 @@ function updateKembali(total){
   const t = total == null ? hitungCart().total : total, tunai = kMetode === 'Tunai' && !salCur().bayar_aplikasi;
   const bayar = num($('kBayar').value);
   $('kTunaiBox').hidden = !tunai;
+  renderQris();
   const show = tunai && bayar > 0 && t > 0;
   $('kKembaliRow').hidden = !show;
   if(show){ const k = bayar - t; $('kKembali').textContent = k >= 0 ? rp(k) : 'Kurang ' + rp(-k); $('kKembali').style.color = k >= 0 ? 'var(--good)' : 'var(--bad)'; }
@@ -2173,6 +2206,77 @@ $('kDiskonMode').addEventListener('click', e => { const b = e.target.closest('[d
 $('kDiskon').addEventListener('input', renderCart);
 $('kBayar').addEventListener('input', () => updateKembali());
 $('kReload').addEventListener('click', () => { loadJual(); loadSaya(); refreshShift(); flushQueue(true); loadPesanan(); });
+
+/* ---------- QRIS di kasir (gambar di tabel qris_kasir: tim baca, pemilik ubah) ---------- */
+let qrisGambar = null, qrisStatus = '';   // qrisStatus: '' | 'belum' (tabel belum ada) | 'gagal'
+async function loadQris(){
+  const {data, error} = await sb.from('qris_kasir').select('gambar').eq('id', 1).maybeSingle();
+  if(error){
+    qrisStatus = /qris_kasir|relation|schema cache|does not exist/i.test(error.message || '') ? 'belum' : 'gagal';
+    if(isNetErr(error)) qrisGambar = lsGet('hpp-qris', null);
+  } else { qrisStatus = ''; qrisGambar = data ? data.gambar : null; lsSet('hpp-qris', qrisGambar); }
+  renderQris();
+}
+function renderQris(){
+  const pakai = kMetode === 'QRIS' && !salCur().bayar_aplikasi;
+  $('kQrisBox').hidden = !pakai;
+  $('kQrisLihat').hidden = !qrisGambar;
+  $('kQrisLihat').disabled = !hitungCart().items.length;
+  const n = $('kQrisNote'); n.hidden = !!qrisGambar;
+  n.textContent = qrisStatus === 'belum' ? 'QRIS di layar belum aktif: jalankan qris.sql di Supabase.' : qrisStatus === 'gagal' ? 'Gambar QRIS belum bisa dimuat. Pakai QRIS cetak dulu.'
+    : me && me.role === 'owner' ? 'Belum ada gambar QRIS. Unggah di bagian “Gambar QRIS” di bawah.' : 'Belum ada gambar QRIS. Pakai QRIS cetak.';
+  $('qrisSet').hidden = !(me && me.role === 'owner');
+  $('qrisPratinjau').hidden = $('qrisHapus').hidden = !qrisGambar;
+  if(qrisGambar) $('qrisPratinjau').src = qrisGambar;
+}
+function tutupQris(){ $('qrisLayar').hidden = true; }
+$('kQrisLihat').addEventListener('click', () => {
+  const c = hitungCart(); if(!c.items.length || !qrisGambar) return;
+  $('qrisTotal').textContent = rp(c.total); $('qrisGambar').src = qrisGambar; $('qrisLayar').hidden = false; $('qrisTutup').focus();
+});
+$('qrisTutup').addEventListener('click', tutupQris);
+$('qrisSelesai').addEventListener('click', () => { tutupQris(); $('kSimpan').click(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') tutupQris(); });
+// Gambar kecil disimpan apa adanya; yang besar dikecilkan supaya tetap ringan tapi masih terbaca
+function bacaQris(file){
+  return new Promise((ok, gagal) => {
+    const fr = new FileReader();
+    fr.onerror = () => gagal(new Error('File tidak bisa dibaca.'));
+    fr.onload = () => {
+      const im = new Image();
+      im.onerror = () => gagal(new Error('File ini bukan gambar yang bisa dibaca.'));
+      im.onload = () => {
+        if(fr.result.length < 400000 && Math.max(im.width, im.height) <= 2000){ ok(fr.result); return; }
+        const s = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+        c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        const d = c.toDataURL('image/jpeg', 0.9);
+        d.length < 690000 ? ok(d) : gagal(new Error('Gambar terlalu besar. Pakai gambar di bawah 500 KB.'));
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+$('qrisFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  const m = $('qrisMsg');
+  try {
+    if(!/^image\/(png|jpeg|webp)$/.test(f.type)) throw new Error('Pakai gambar PNG, JPG, atau WEBP.');
+    msg(m, 'info', 'Menyimpan QRIS…');
+    const gambar = await bacaQris(f);
+    const {error} = await sb.from('qris_kasir').upsert({id: 1, gambar, updated_at: new Date().toISOString()});
+    if(error) throw error;
+    qrisGambar = gambar; qrisStatus = ''; lsSet('hpp-qris', gambar); renderQris();
+    msg(m, 'ok', 'QRIS tersimpan. Coba pindai sekali dan pastikan nama merchantnya benar.');
+  } catch(err){ msg(m, 'err', /qris_kasir/.test(err.message || '') ? 'Jalankan qris.sql di Supabase dulu.' : terjemah(err)); }
+});
+$('qrisHapus').addEventListener('click', async () => {
+  if(!confirm('Hapus gambar QRIS dari kasir?')) return;
+  const {error} = await sb.from('qris_kasir').delete().eq('id', 1);
+  if(error){ msg($('qrisMsg'), 'err', terjemah(error)); return; }
+  qrisGambar = null; lsSet('hpp-qris', null); renderQris(); msg($('qrisMsg'), 'ok', 'Gambar QRIS dihapus.');
+});
 
 /* ---------- Pesanan online dari web menu pelanggan ---------- */
 let pesanan = [], pesananReady = true, pesananAktif = null, pesananTimer = null, sudahBunyi = new Set(), tokoStatus = null, habisSet = new Set();
