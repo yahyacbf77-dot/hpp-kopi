@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YA Coffee & Cake · Kasir & HPP</title>
 <meta name="theme-color" content="#9a5b25">
-<link rel="icon" href="logo.webp" type="image/webp">
-<link rel="apple-touch-icon" href="logo.webp">
+<link rel="icon" href="ikon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="ikon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -445,7 +445,7 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
   </section>
 
   <section id="screen-loading" class="auth" hidden>
-    <p class="muted" style="text-align:center">Memuat…</p>
+    <p class="muted" style="text-align:center" id="muatTeks">Memuat…</p>
   </section>
 
   <!-- Login -->
@@ -501,6 +501,7 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
         <span id="syncStatus" class="sync" role="status" hidden></span>
         <span><b id="meNama"></b></span>
         <span id="meRole" class="role"></span>
+        <button class="btn primary" type="button" id="pasangApp" hidden>Instal aplikasi</button>
         <button class="btn" type="button" data-logout>Keluar</button>
       </div>
     </header>
@@ -509,6 +510,7 @@ table.bahan tr.edit-bawah td{background:var(--accent-soft);padding:8px 10px 12px
     <div class="more-menu" id="moreMenu" hidden></div>
 
     <!-- PEMILIK: Menu & HPP -->
+    <div class="panel empty" id="butuhInternet" hidden>Data menu dan HPP butuh internet. Bagian ini terbuka sendiri setelah internet tersambung. Tab <b>Kasir</b> tetap bisa dipakai.</div>
     <section id="tab-produk" hidden>
       <div class="grid">
         <aside>
@@ -894,11 +896,35 @@ const SCREENS = ['screen-setup','screen-loading','screen-auth','screen-noaccess'
 const show = id => SCREENS.forEach(s => $(s).hidden = s !== id);
 
 // Simpan halaman di HP supaya tetap bisa dibuka saat internet putus
+// Tombol "Instal aplikasi" muncul kalau browser mengizinkan dan aplikasinya belum dipasang
+let ajakPasang = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ajakPasang = e; $('pasangApp').hidden = false; });
+window.addEventListener('appinstalled', () => { ajakPasang = null; $('pasangApp').hidden = true; });
+$('pasangApp').addEventListener('click', async () => { if(!ajakPasang) return; const a = ajakPasang; ajakPasang = null; $('pasangApp').hidden = true; a.prompt(); });
+// Minta browser tidak membuang transaksi yang belum terkirim saat memori HP penuh
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 const cfg = window.HPP_CONFIG || {};
 if(!cfg.SUPABASE_URL || /GANTI/.test(cfg.SUPABASE_URL) || !cfg.SUPABASE_ANON_KEY || /GANTI/.test(cfg.SUPABASE_ANON_KEY) || !window.supabase){ show('screen-setup'); return; }
 const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+/* Tanpa internet, permintaan langsung dianggap gagal. Kalau tidak, Supabase menunggu perpanjangan sesi login
+   (bisa puluhan detik) dan layar macet di "Memuat…". Wi-Fi tanpa internet: pembacaan data & simpan transaksi
+   dibatasi waktunya. Simpan transaksi aman diulang (p_client_id); penulisan lain sengaja tidak dibatasi. */
+(() => {
+  let proto = sb.rpc('shift_saya');
+  while(proto && !Object.prototype.hasOwnProperty.call(proto, 'then')) proto = Object.getPrototypeOf(proto);
+  if(!proto || proto === Promise.prototype) return;
+  const asli = proto.then, gagal = pesan => ({data:null, error:{message:pesan}, count:null, status:0, statusText:''});
+  proto.then = function(ok, tolak){
+    if(!navigator.onLine) return Promise.resolve(gagal('Failed to fetch (offline)')).then(ok, tolak);
+    const baca = this.method === 'GET' || this.method === 'HEAD' || /\/rpc\/(catat_penjualan|penjualan_saya|shift_saya)$/.test(String(this.url && this.url.pathname || ''));
+    if(!baca) return asli.call(this, ok, tolak);
+    let jam;
+    const batas = new Promise(r => { jam = setTimeout(() => r(gagal('Failed to fetch (timeout)')), 12000); });
+    return Promise.race([asli.call(this, x => x), batas]).finally(() => clearTimeout(jam)).then(ok, tolak);
+  };
+})();
 
 /* ---------- Utilitas ---------- */
 const rp = n => 'Rp ' + Math.round(n||0).toLocaleString('id-ID');
@@ -1080,12 +1106,15 @@ async function loadOwner(silent){
     sb.from('hpp_terkini').select('kunci,menu_id,nama,kategori,hpp,harga'),
   ]);
   const pg = await sb.from('pengaturan').select('kunci,nilai').eq('kunci', 'biaya_tetap_kopi').maybeSingle();
-  tetapReady = !pg.error;
+  if(!(pg.error && isNetErr(pg.error))) tetapReady = !pg.error;
   if(pg.data && pg.data.nilai && Array.isArray(pg.data.nilai.items)) biayaTetap = pg.data.nilai.items.map(t =>
     t.bahanId ? {id: t.id || uid(), bahanId: t.bahanId, qty: num(t.qty) || 1} : {id: t.id || uid(), nama: t.nama || '', biaya: num(t.biaya)});
   // bahan-kategori.sql belum dijalankan: muat tanpa kolom kategori
   katReady = !(b.error && /kategori/i.test(b.error.message || ''));
   if(!katReady) b = await sb.from('bahan').select('id,nama,harga,isi,satuan').order('created_at');
+  // Salah satu gagal karena internet: jangan hitung & kirim HPP dari data yang tidak lengkap
+  const putus = [b, m, hk, pg].find(r => r.error && isNetErr(r.error));
+  if(putus){ setSync('error', terjemah(putus.error)); $('syncStatus').textContent = 'Tidak ada internet'; return; }
   if(b.error || m.error){ setSync('error', terjemah(b.error || m.error)); return; }
   hppReady = !hk.error;
   if(hppReady) hppSynced = new Map(hk.data.map(r => [r.kunci, JSON.stringify({kunci:r.kunci, menu_id:r.menu_id, nama:r.nama, kategori:r.kategori, hpp:+r.hpp, harga:+r.harga})]));
@@ -1102,8 +1131,12 @@ async function loadOwner(silent){
     if(!state.produk.find(p => p.id === sel)) sel = state.produk[0] ? state.produk[0].id : null;
     renderOwnerAll();
   }
-  try { await syncHpp(); if(!silent || !same) setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
+  if(!ownerSiap){ ownerSiap = true; if(me && TAB_HPP.includes(currentTab)) openTab(currentTab); }
+  try { await syncHpp(); if(!silent || !same || $('syncStatus').textContent === 'Tidak ada internet') setSync('synced'); } catch(e){ setSync('error', terjemah(e)); }
 }
+// Pemilik membuka aplikasi tanpa internet: data HPP belum termuat, jadi tab HPP dikunci dulu supaya tidak mengisi dari data kosong
+let ownerSiap = false;
+const TAB_HPP = ['produk','bahan','ringkasan'];
 
 /* ---------- Bahan tetap per cup kopi ----------
    Bahan kopi yang dicentang "tetap" (mis. cup + tutup, es batu) otomatis masuk ke HPP setiap menu kopi.
@@ -1273,7 +1306,34 @@ function bagiRata(p){
 }
 
 /* ---------- Login ---------- */
-let authMode = 'masuk', bootedId, recovering = false;
+let authMode = 'masuk', bootedId, recovering = false, modeLokal = false;
+/* ---------- Buka aplikasi tanpa internet ----------
+   Sesi login & profil terakhir di HP ini dipakai dulu; begitu internet kembali, akun diperiksa ulang ke server.
+   Hak akses tetap dijaga database, jadi yang terbuka hanya data yang memang tersimpan di HP ini. */
+const KUNCI_SESI = (() => { try { return `sb-${new URL(cfg.SUPABASE_URL).hostname.split('.')[0]}-auth-token`; } catch(e){ return ''; } })();
+function sesiTersimpan(){ const s = lsGet(KUNCI_SESI, null); return s && s.refresh_token && s.user && s.user.id ? s : null; }
+function bukaLokal(){
+  if(bootedId || recovering || /type=recovery|access_token=|[?&]code=/.test(location.href)) return;
+  const s = sesiTersimpan(); if(!s) return;
+  const c = lsGet('hpp-profil', null);
+  if(c && c.id === s.user.id && c.aktif && c.role !== 'none'){ bootedId = s.user.id; modeLokal = true; boot(s, true); }
+  else { show('screen-loading'); $('muatTeks').textContent = 'Tidak ada internet. Sambungkan internet sekali di perangkat ini supaya bisa dibuka tanpa internet.'; }
+}
+setTimeout(bukaLokal, navigator.onLine ? 5000 : 0);
+// Internet kembali setelah dibuka tanpa internet: periksa akun, lalu muat data terbaru
+async function segarkan(){ if(segarkan.jalan) return; segarkan.jalan = true; try { await segarkanIsi(); } finally { segarkan.jalan = false; } }
+async function segarkanIsi(){
+  if(!me) return;
+  const {data, error} = await sb.from('profiles').select('*').eq('id', me.id).maybeSingle();
+  if(error || !me) return;
+  if(!data || data.role !== me.role || !data.aktif){ lsSet('hpp-profil', data); modeLokal = false; const s = sesiTersimpan(); if(s){ bootedId = s.user.id; boot(s); } return; }
+  modeLokal = false; lsSet('hpp-profil', data);
+  if(me.role === 'owner'){ if(!ownerSiap) await loadOwner(); } else loadStaff();
+  flushQueue(); loadPesanan();
+  if(currentTab === 'kasir'){ loadJual(); loadSaya(); loadQris(); if(!$('sFisik') && !($('sModal') && $('sModal').value)) refreshShift(); }
+}
+window.addEventListener('online', () => { if(modeLokal || (me && me.role === 'owner' && !ownerSiap)) setTimeout(segarkan, 1500); });
+setInterval(() => { if(navigator.onLine && me && (modeLokal || (me.role === 'owner' && !ownerSiap))) segarkan(); }, 20000);
 function setAuthMode(mode){
   authMode = mode;
   document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === mode));
@@ -1331,18 +1391,21 @@ sb.auth.onAuthStateChange((event, session) => {
       recovering = true; show('screen-auth'); $('authCard').hidden = true; $('resetCard').hidden = false; $('rPass').focus(); return;
     }
     if(recovering) return;
+    // Perpanjangan sesi gagal karena internet, bukan karena keluar: jangan lempar ke layar login
+    if(!session && event !== 'SIGNED_OUT' && sesiTersimpan()){ bukaLokal(); return; }
     const id = session ? session.user.id : null;
-    if(id === bootedId) return;
+    if(id === bootedId){ if(session && modeLokal) segarkan(); return; }
+    modeLokal = false;
     bootedId = id; boot(session);
   }, 0);
 });
 
-async function boot(session){
+async function boot(session, lokal){
   me = null;
   if(!session){ pesanan = []; renderSiaga(); aturLayar(); show('screen-auth'); setAuthMode('masuk'); return; }
   show('screen-loading');
-  let {data, error} = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-  if(error && isNetErr(error)){ const c = lsGet('hpp-profil', null); if(c && c.id === session.user.id){ data = c; error = null; } }
+  let {data, error} = lokal ? {data: lsGet('hpp-profil', null), error: null} : await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+  if(error && isNetErr(error)){ const c = lsGet('hpp-profil', null); if(c && c.id === session.user.id){ data = c; error = null; modeLokal = true; } }
   if(error || !data || data.role === 'none' || !data.aktif){
     $('naEmail').textContent = session.user.email; show('screen-noaccess'); return;
   }
@@ -1354,8 +1417,11 @@ async function boot(session){
   $('syncStatus').hidden = true;
   show('screen-app');
   buildTabs();
-  if(me.role === 'owner'){ await loadOwner(); openTab('produk'); }
-  else { await loadStaff(); openTab('kasir'); }
+  ownerSiap = false;
+  if(me.role === 'owner'){
+    if(modeLokal){ openTab('kasir'); setSync('error'); $('syncStatus').textContent = 'Tidak ada internet'; loadOwner(); }
+    else { await loadOwner(); if(!me) return; openTab(ownerSiap ? 'produk' : 'kasir'); }
+  } else { openTab('kasir'); loadStaff().then(() => { if(me && currentTab === 'belanja') renderBelanjaForm(); }); }
   flushQueue();
   mulaiPollingPesanan();
 }
@@ -1414,8 +1480,10 @@ function openTab(name){
   lihatDetail(false);
   tandaiTab(name);
   if(window.matchMedia('(max-width:699px)').matches) window.scrollTo(0, 0);
-  ALL_TABS.forEach(t => $('tab-'+t).hidden = t !== name);
-  if(name === 'produk') renderEditor();
+  const kunci = me.role === 'owner' && !ownerSiap && TAB_HPP.includes(name);
+  $('butuhInternet').hidden = !kunci;
+  ALL_TABS.forEach(t => $('tab-'+t).hidden = t !== name || kunci);
+  if(name === 'produk' && !kunci) renderEditor();
   if(name === 'belanja'){ renderBelanjaForm(); loadBelanja(); }
   if(name === 'tim') loadTim();
   tutupQris();
@@ -1975,8 +2043,12 @@ async function loadStaff(){
     sb.from('bahan_umum').select('*').order('nama'),
     sb.from('menu_umum').select('*').order('nama'),
   ]);
+  // Tanpa internet: resep terakhir yang tersimpan di HP ini
+  const cr = lsGet('hpp-cache-resep', null), err = b.error || m.error;
+  if(err && isNetErr(err) && cr && me && cr.uid === me.id){ staff = {bahan: cr.bahan, menu: cr.menu}; if(!staff.menu.find(x => x.id === rsel)) rsel = staff.menu[0] ? staff.menu[0].id : null; renderResepList(); renderResep(); return; }
   if(b.error || m.error){ $('resepDetail').innerHTML = `<div class="panel empty">Gagal memuat data: ${esc(terjemah(b.error || m.error))}</div>`; return; }
   staff = {bahan: b.data, menu: m.data.map(x => ({...x, items: x.items || [], varian: x.varian || []}))};
+  if(me) lsSet('hpp-cache-resep', {uid: me.id, bahan: staff.bahan, menu: staff.menu});
   if(!staff.menu.find(x => x.id === rsel)) rsel = staff.menu[0] ? staff.menu[0].id : null;
   renderResepList(); renderResep();
 }
@@ -2158,6 +2230,8 @@ const hargaSal = (h, s) => +s.markup > 0 ? Math.ceil(+h * (1 + +s.markup/100) / 
 function setOffline(pakaiCache){ $('kOffline').hidden = navigator.onLine && !pakaiCache; }
 
 async function loadJual(){
+  // Menu terakhir tampil dulu, jadi kasir langsung bisa dipakai walau internet lambat
+  if(!jual.length){ const c = lsGet(CKEY, null); if(c && c.jual && c.jual.length){ jual = c.jual; saluran = c.saluran || []; if(!salAktif().find(x => x.id === kSaluran)) kSaluran = salAktif()[0].id; renderSaluran(); renderGrid(); renderCart(); } }
   const [j, s] = await Promise.all([
     sb.from('menu_jual').select('kunci,menu_id,nama,kategori,harga').order('kategori').order('nama'),
     sb.from('saluran').select('*').order('urutan'),
@@ -2174,7 +2248,7 @@ async function loadJual(){
   [...cart.keys()].forEach(k => { if(!jual.find(x => x.kunci === k)) cart.delete(k); });
   renderSaluran(); renderGrid(); renderCart();
   if(loadPesanan.pernah) renderPesanan();
-  if(me.role === 'owner' && !err) renderSalSet();
+  if(me && me.role === 'owner' && !err) renderSalSet();
 }
 function renderSaluran(){
   const list = salAktif(), cur = salCur();
@@ -2264,7 +2338,7 @@ async function loadQris(){
   const {data, error} = await sb.from('qris_kasir').select('gambar').eq('id', 1).maybeSingle();
   if(error){
     qrisStatus = /qris_kasir|relation|schema cache|does not exist/i.test(error.message || '') ? 'belum' : 'gagal';
-    if(isNetErr(error)) qrisGambar = lsGet('hpp-qris', null);
+    if(isNetErr(error)){ qrisStatus = ''; qrisGambar = lsGet('hpp-qris', null); if(!qrisGambar) qrisStatus = 'gagal'; }
   } else { qrisStatus = ''; qrisGambar = data ? data.gambar : null; lsSet('hpp-qris', qrisGambar); }
   renderQris();
 }
@@ -2421,7 +2495,9 @@ async function loadPesanan(){
   baru.forEach(x => sudahBunyi.add(x.id)); loadPesanan.pernah = true;
   renderPesanan();
 }
-function mulaiPollingPesanan(){ clearInterval(pesananTimer); loadPesanan(); pesananTimer = setInterval(loadPesanan, 15000); }
+function mulaiPollingPesanan(){ clearInterval(pesananTimer); pollPesanan(); pesananTimer = setInterval(pollPesanan, 15000); }
+// Internet lambat: jangan menumpuk pemeriksaan
+async function pollPesanan(){ if(pollPesanan.jalan) return; pollPesanan.jalan = true; try { await loadPesanan(); } catch(e){} finally { pollPesanan.jalan = false; } }
 function renderPesanan(){
   $('pesananPanel').hidden = !pesananReady;
   renderSiaga();
@@ -2580,7 +2656,7 @@ async function flushQueue(force){
       const {error} = await sb.rpc('catat_penjualan', item.payload);
       if(error && isNetErr(error)) break;
       const cur = qGet(), id = item.payload.p_client_id;
-      if(error){ const it = cur.find(x => x.payload.p_client_id === id); if(it) it.error = terjemah(error); qSet(cur); }
+      if(error && !/client_id_uq|duplicate key/i.test(error.message || '')){ const it = cur.find(x => x.payload.p_client_id === id); if(it) it.error = terjemah(error); qSet(cur); }
       else { qSet(cur.filter(x => x.payload.p_client_id !== id)); sent++; }
     }
   } finally { sendingQ = false; }
