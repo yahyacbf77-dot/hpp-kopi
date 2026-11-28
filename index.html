@@ -278,6 +278,9 @@ dialog.dlg h2{margin:0}
 .auth .brand .brand-logo{width:104px;height:104px;display:block;margin:0 auto 8px}
 @media (max-width:600px){.brand-row .brand-logo{width:44px;height:44px} h1{font-size:22px}}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.mgrup{grid-column:1/-1;margin:10px 0 0;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.mgrup:first-child{margin-top:0}
+.mgrup::after{content:"";flex:1;height:1px;background:var(--line)}
 .mbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px;cursor:pointer;min-height:76px;position:relative}
 .mbtn:hover{border-color:var(--accent)}
 .mbtn:active{transform:scale(.98)}
@@ -2232,17 +2235,19 @@ function setOffline(pakaiCache){ $('kOffline').hidden = navigator.onLine && !pak
 async function loadJual(){
   // Menu terakhir tampil dulu, jadi kasir langsung bisa dipakai walau internet lambat
   if(!jual.length){ const c = lsGet(CKEY, null); if(c && c.jual && c.jual.length){ jual = c.jual; saluran = c.saluran || []; if(!salAktif().find(x => x.id === kSaluran)) kSaluran = salAktif()[0].id; renderSaluran(); renderGrid(); renderCart(); } }
-  const [j, s] = await Promise.all([
-    sb.from('menu_jual').select('kunci,menu_id,nama,kategori,harga').order('kategori').order('nama'),
+  let [j, s] = await Promise.all([
+    sb.from('menu_jual').select('kunci,menu_id,nama,kategori,harga,kelompok,urut'),
     sb.from('saluran').select('*').order('urutan'),
   ]);
+  // kasir-urutan.sql belum dijalankan: muat tanpa kolom urutan
+  if(j.error && /kelompok|urut/i.test(j.error.message || '')) j = await sb.from('menu_jual').select('kunci,menu_id,nama,kategori,harga');
   const err = j.error || s.error;
   if(err){
     const c = lsGet(CKEY, null);
     if(isNetErr(err) && c){ jual = c.jual || []; saluran = c.saluran || []; setOffline(true); }
     else { $('menuGrid').innerHTML = `<p class="msg err">Gagal memuat menu: ${esc(terjemah(err))}. Pastikan penjualan.sql dan fitur-lanjutan.sql sudah dijalankan di Supabase.</p>`; return; }
   } else {
-    jual = j.data; saluran = s.data; lsSet(CKEY, {jual, saluran, at: Date.now()}); setOffline(false);
+    jual = urutkanJual(j.data); saluran = s.data; lsSet(CKEY, {jual, saluran, at: Date.now()}); setOffline(false);
   }
   if(!salAktif().find(x => x.id === kSaluran)) kSaluran = salAktif()[0].id;
   [...cart.keys()].forEach(k => { if(!jual.find(x => x.kunci === k)) cart.delete(k); });
@@ -2258,10 +2263,26 @@ function renderSaluran(){
   $('kAplikasiNote').hidden = !cur.bayar_aplikasi;
   if(cur.bayar_aplikasi) $('kAplikasiNote').textContent = `Dibayar lewat aplikasi ${cur.nama}. Harga otomatis +${num(cur.markup)}%, potongan aplikasi ${num(cur.komisi)}% dicatat di laporan.`;
 }
+/* Urutan sama dengan web menu: kelompok diurutkan menurut menu pertamanya, isi kelompok menurut Urutan lalu nama.
+   Tanpa urutan (999) = paling bawah. Tanpa kelompok = Kopi / Kue. */
+const kelompokJual = j => (j.kelompok || j.kategori || 'Lainnya').trim();
+function urutkanJual(list){
+  const awal = new Map();
+  list.forEach(j => { const k = kelompokJual(j), u = j.urut ?? 999; if(!awal.has(k) || u < awal.get(k)) awal.set(k, u); });
+  return [...list].sort((a, b) => {
+    const ka = kelompokJual(a), kb = kelompokJual(b);
+    return (ka === kb ? 0 : (awal.get(ka) - awal.get(kb)) || ka.localeCompare(kb, 'id'))
+      || ((a.urut ?? 999) - (b.urut ?? 999)) || a.nama.localeCompare(b.nama, 'id');
+  });
+}
 function renderGrid(){
-  const s = salCur(), list = jual.filter(j => !kFilter || j.kategori === kFilter);
-  $('menuGrid').innerHTML = list.length ? list.map(j => { const q = cart.get(j.kunci) || 0, ok = +j.harga > 0, ada = stokMap.has(j.kunci), sisa = stokSisa(j.kunci); return `
-    <button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${!ok ? 'disabled title="Harga belum diisi pemilik"' : sisa <= 0 ? `disabled title="${q ? 'Stok sudah di keranjang semua' : 'Stok habis'}"` : ''}>
+  const s = salCur(), list = urutkanJual(jual.filter(j => !kFilter || j.kategori === kFilter));
+  const banyak = new Set(list.map(kelompokJual)).size > 1;
+  let kelompokTadi = null;
+  $('menuGrid').innerHTML = list.length ? list.map(j => {
+    const k = kelompokJual(j), judul = banyak && k !== kelompokTadi ? `<div class="mgrup" role="presentation">${esc(k)}</div>` : '';
+    kelompokTadi = k; const q = cart.get(j.kunci) || 0, ok = +j.harga > 0, ada = stokMap.has(j.kunci), sisa = stokSisa(j.kunci); return `
+    ${judul}<button type="button" class="mbtn ${j.kategori==='Kue'?'kue':'kopi'}" data-k="${esc(j.kunci)}" ${!ok ? 'disabled title="Harga belum diisi pemilik"' : sisa <= 0 ? `disabled title="${q ? 'Stok sudah di keranjang semua' : 'Stok habis'}"` : ''}>
       ${q ? `<span class="q">${q}</span>` : ''}
       <span class="n">${esc(j.nama)}</span><span class="p num">${ok ? rp(hargaSal(j.harga, s)) : 'Harga belum diisi'}</span>
       ${ada ? `<span class="stok ${sisa <= 0 ? 'nol' : ''}">${stokMap.get(j.kunci) === 0 ? 'Habis' : 'Sisa ' + Math.max(sisa, 0)}</span>` : ''}
